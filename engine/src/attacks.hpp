@@ -3,6 +3,10 @@
 #include <array>
 #include <cstddef>
 
+#if defined(__BMI2__)
+#include <immintrin.h>
+#endif
+
 #include "bitboard.hpp"
 #include "types.hpp"
 
@@ -138,6 +142,69 @@ namespace KnightLift {
         return bishop_attacks_reference(s, occupied) | rook_attacks_reference(s, occupied);
     }
 
+    // ---- Sliding pieces: PEXT bitboards ---------------------------------------
+
+#if defined(__BMI2__)
+    inline constexpr bool kHasHardwarePext = true;
+#else
+    inline constexpr bool kHasHardwarePext = false;
+#endif
+
+    namespace detail {
+
+        // Portable software versions of the BMI2 instructions PEXT and PDEP.
+        constexpr Bitboard pext_software(Bitboard value, Bitboard mask) {
+            Bitboard result = 0;
+            for (Bitboard bit = 1; mask != 0; bit <<= 1) {
+                if (value & mask & -mask) result |= bit;
+                mask &= mask - 1;
+            }
+            return result;
+        }
+
+        constexpr Bitboard pdep_software(Bitboard value, Bitboard mask) {
+            Bitboard result = 0;
+            for (Bitboard bit = 1; mask != 0; bit <<= 1) {
+                if (value & bit) result |= mask & -mask;
+                mask &= mask - 1;
+            }
+            return result;
+        }
+
+        struct SliderEntry {
+            Bitboard mask = 0;
+            const Bitboard* attacks = nullptr;
+        };
+
+        extern std::array<SliderEntry, kNumSquares> gBishopEntries;
+        extern std::array<SliderEntry, kNumSquares> gRookEntries;
+
+    }  // namespace detail
+
+    inline Bitboard pext(Bitboard value, Bitboard mask) {
+#if defined(__BMI2__)
+        return _pext_u64(value, mask);
+#else
+        return detail::pext_software(value, mask);
+#endif
+    }
+
+    // Must be called once before bishop_attacks / rook_attacks / queen_attacks.
+    void init_attacks();
+
+    inline Bitboard bishop_attacks(Square s, Bitboard occupied) {
+        const detail::SliderEntry& e = detail::gBishopEntries[to_index(s)];
+        return e.attacks[pext(occupied, e.mask)];
+    }
+
+    inline Bitboard rook_attacks(Square s, Bitboard occupied) {
+        const detail::SliderEntry& e = detail::gRookEntries[to_index(s)];
+        return e.attacks[pext(occupied, e.mask)];
+    }
+
+    inline Bitboard queen_attacks(Square s, Bitboard occupied) {
+        return bishop_attacks(s, occupied) | rook_attacks(s, occupied);
+    }
 
     // ---- Compile-time sanity checks -------------------------------------------
 
@@ -182,4 +249,11 @@ namespace KnightLift {
     // Totals over all 64 squares on an empty board: rook 896, bishop 560.
     static_assert(detail::total_empty_board_attacks(&rook_attacks_reference) == 896);
     static_assert(detail::total_empty_board_attacks(&bishop_attacks_reference) == 560);
+
+    // Software PEXT / PDEP.
+    static_assert(detail::pext_software(0b101101, 0b111000) == 0b101);
+    static_assert(detail::pdep_software(0b101, 0b111000) == 0b101000);
+    static_assert(detail::pdep_software(0b1101, 0xF0F0) == 0xD0);
+    static_assert(detail::pext_software(detail::pdep_software(0b1101, 0xF0F0), 0xF0F0) == 0b1101);
+
 } // namespace KnightLift

@@ -1,3 +1,4 @@
+#include <chrono>
 #include <iostream>
 #include <string_view>
 
@@ -23,12 +24,46 @@ namespace {
         "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR x KQkq - 0 1",
         "8/8/8/8/8/8/8/8 w - - 0 1",
     };
+    std::uint64_t next_random(std::uint64_t& state) {
+        state ^= state >> 12;
+        state ^= state << 25;
+        state ^= state >> 27;
+        return state * 2685821657736338717ULL;
+    }
+
+    bool verify_sliders() {
+        using namespace KnightLift;
+
+        std::uint64_t state = 0x9E3779B97F4A7C15ULL;
+        for (std::size_t i = 0; i < kNumSquares; ++i) {
+            const Square s = static_cast<Square>(i);
+            for (int n = 0; n < 10000; ++n) {
+                const Bitboard occupied = next_random(state) & next_random(state);
+                if (rook_attacks(s, occupied) != rook_attacks_reference(s, occupied) ||
+                    bishop_attacks(s, occupied) != bishop_attacks_reference(s, occupied)) {
+                    return false;
+                    }
+            }
+        }
+        return true;
+    }
+
 }  // namespace
 
 int main() {
     using namespace KnightLift;
 
     std::cout << kEngineName << ' ' << kVersion << '\n';
+
+    std::cout << "pext: " << (kHasHardwarePext ? "hardware (BMI2)" : "software fallback") << '\n';
+
+    const auto start = std::chrono::steady_clock::now();
+    init_attacks();
+    const auto stop = std::chrono::steady_clock::now();
+    std::cout << "init_attacks: "
+              << std::chrono::duration<double, std::milli>(stop - start).count() << " ms\n";
+
+    std::cout << "sliders vs reference: " << (verify_sliders() ? "OK" : "MISMATCH") << '\n';
 
     Position pos;
 
