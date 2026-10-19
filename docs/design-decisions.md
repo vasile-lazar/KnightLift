@@ -102,5 +102,23 @@ which alternatives existed, and why.
 - Planned measurement: nanoseconds per lookup for reference vs PEXT vs magic
   bitboards.
 
+## 1e-3b. PEXT bitboards for sliding attacks (2026-10-19)
+- Lookup: index = PEXT(occupied, relevant_mask[sq]); attacks =
+  table[sq][index]. The relevant mask excludes ray-end (edge) squares, whose
+  occupancy cannot change the result. Rook tables: 102,400 entries (800 KiB);
+  bishop: 5,248 entries (41 KiB); the PEXT index is dense, so these are the
+  minimum sizes, with no magic numbers to search for.
+- Tables are filled at startup by init_attacks() from the reference
+  implementation, using PDEP to enumerate blocker subsets. Not constexpr:
+  ~107k entries would approach the compiler's constexpr step limit.
+- Portability: hardware PEXT when __BMI2__ is defined (CMake option
+  KNIGHTLIFT_NATIVE, -march=native); correct but slower software fallback
+  otherwise. Release binaries must use a fixed target level, not native.
+- Verified against the reference implementation with 10,000 random
+  occupancies per square for both piece types, and by table-size checks.
+- To measure: init time; lookup cost for reference vs PEXT vs magic bitboards.
+- Known caveat: PEXT is microcoded and slow on AMD Zen 1/2, so a
+  magic-bitboard fallback is planned (1e-3c).
+
 ## Sources
 - Chess Programming Wiki: Bitboards, Square Mapping Considerations.
