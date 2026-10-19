@@ -78,5 +78,17 @@ which alternatives existed, and why.
 - MoveList: fixed 256-entry array on the stack (max known legal moves: 218).
   To measure later: cost of zero-initializing the array per node.
 
+## 1e-2. Leaper attack tables (2026-10-19)
+- Knight, king and pawn attacks are precomputed per square (pawns per color)
+  in constexpr tables: zero startup cost, stored as read-only data, verified
+  at compile time with static_assert (totals: knight 336, king 420, pawn 98
+  per color).
+- Construction uses (file, rank) offsets with separate bounds checks, which
+  avoids the edge wrap-around bug of shift-based construction. Run time is
+  irrelevant because it executes at compile time.
+- inline constexpr tables give one shared copy across translation units.
+- Attacker detection uses symmetry: attackers of square s by color c =
+  attacks_of(~c, s) & pieces(c, type).
+
 ## Sources
 - Chess Programming Wiki: Bitboards, Square Mapping Considerations.
