@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string_view>
 
+#include "attacks.hpp"
 #include "position.hpp"
 #include "move.hpp"
 
@@ -66,5 +67,18 @@ int main() {
                   << (m.is_promotion() ? " promotion" : "") << '\n';
     }
     std::cout << "moves: " << list.size() << ", sizeof(Move) = " << sizeof(Move) << '\n';
+
+    std::cout << "\nknight g1:\n" << bitboard_to_string(knight_attacks(Square::G1));
+    std::cout << "king h1:\n" << bitboard_to_string(king_attacks(Square::H1));
+    std::cout << "white pawn d4:\n" << bitboard_to_string(pawn_attacks(Color::White, Square::D4));
+
+    const Bitboard rookBlockers = square_bb(Square::D6) | square_bb(Square::B4);
+    std::cout << "\nrook d4, blockers d6 b4:\n"
+              << bitboard_to_string(rook_attacks_reference(Square::D4, rookBlockers));
+
+    const Bitboard bishopBlockers = square_bb(Square::F5) | square_bb(Square::C2);
+    std::cout << "bishop e4, blockers f5 c2:\n"
+              << bitboard_to_string(bishop_attacks_reference(Square::E4, bishopBlockers));
+
     return 0;
 }
