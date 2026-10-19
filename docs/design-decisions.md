@@ -90,5 +90,17 @@ which alternatives existed, and why.
 - Attacker detection uses symmetry: attackers of square s by color c =
   attacks_of(~c, s) & pieces(c, type).
 
+## 1e-3a. Sliding attacks, reference implementation (2026-10-19)
+- Sliders take (square, occupancy). The result includes the first blocker on
+  each ray (any color) and nothing behind it; move generation masks out
+  friendly pieces. This gives captures and "defended piece" detection for free.
+- Ray walk with separate file/rank bounds checks; queen = bishop | rook.
+- constexpr, verified at compile time (empty-board totals: rook 896, bishop
+  560; spot checks with blockers).
+- Role: oracle for testing the optimized implementations, and table builder
+  for PEXT/magic tables. Not used in the search.
+- Planned measurement: nanoseconds per lookup for reference vs PEXT vs magic
+  bitboards.
+
 ## Sources
 - Chess Programming Wiki: Bitboards, Square Mapping Considerations.
