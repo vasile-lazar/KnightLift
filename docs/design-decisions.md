@@ -65,5 +65,18 @@ which alternatives existed, and why.
   rights, en passant square, halfmove clock, later the hash), instead of
   copy-make.
 
+## 1e-1. Move encoding (2026-10-19)
+- 16-bit move: from (6 bits) | to (6 bits) | flag (4 bits).
+- Flag nibble: bit 2 = capture, bit 3 = promotion, low 2 bits = promotion
+  piece (knight, bishop, rook, queen) or special move (double push, castles).
+  is_capture and is_promotion are single bit tests.
+- 16 bits keep transposition-table entries small. Scores will live in a
+  separate ScoredMove (step 4). Alternative considered: 32-bit move with
+  moving and captured piece embedded.
+- Castling is encoded as the king move (e1g1 / e1c1), matching UCI text.
+- Move 0 (a1a1) is the "no move" value: it can never be legal.
+- MoveList: fixed 256-entry array on the stack (max known legal moves: 218).
+  To measure later: cost of zero-initializing the array per node.
+
 ## Sources
 - Chess Programming Wiki: Bitboards, Square Mapping Considerations.
