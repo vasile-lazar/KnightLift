@@ -1,6 +1,7 @@
 add_executable(KnightLift
         src/main.cpp
         src/bitboard.cpp
+        src/position.cpp
 )
 
 if(MSVC)
