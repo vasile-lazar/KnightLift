@@ -38,5 +38,32 @@ which alternatives existed, and why.
 - Invariants are checked at compile time with static_assert.
 - Verified: square_bb(E4) prints 0x10000000 (bit 28).
 
+## 1c. Bitboard utilities (2026-10-19)
+- Bit operations use C++20 <bit> (std::popcount, std::countr_zero), wrapped in
+  small constexpr functions (popcount, lsb, pop_lsb, more_than_one). No
+  compiler-specific intrinsics.
+- pop_lsb (lsb, then bb &= bb - 1) is the standard loop for iterating over
+  set bits.
+- File and rank masks are derived from kFileABB / kRank1BB by shifting;
+  needed to prevent east/west wrap-around in attack generation.
+- Note for measurements: the default x86-64 baseline has no popcnt
+  instruction; compare perft with and without hardware popcount.
+
+## 1d. Position and FEN (2026-10-19)
+- Position keeps redundant views: 12 piece bitboards, 2 color bitboards,
+  occupancy and a 64-entry mailbox. Bitboards drive move generation; the
+  mailbox answers "which piece is on this square" in O(1). All mutation goes
+  through a small set of functions to keep the views in sync.
+- State: side to move, castling rights (4-bit mask), en passant square,
+  halfmove clock, fullmove number.
+- FEN parsing returns bool and leaves an empty position on failure (UCI input
+  must never crash the engine). Validation: placement geometry, side,
+  castling letters, en passant file/rank, counters, one king per side.
+- Verified by round-trip (parse then print equals input) on four standard
+  positions, and by rejection of five malformed FENs.
+- Planned for make/unmake: a stack of State records (captured piece, castling
+  rights, en passant square, halfmove clock, later the hash), instead of
+  copy-make.
+
 ## Sources
 - Chess Programming Wiki: Bitboards, Square Mapping Considerations.
