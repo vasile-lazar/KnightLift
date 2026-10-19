@@ -1,4 +1,7 @@
-add_executable(KnightLift src/main.cpp)
+add_executable(KnightLift
+        src/main.cpp
+        src/bitboard.cpp
+)
 
 if(MSVC)
     target_compile_options(KnightLift PRIVATE /W4)

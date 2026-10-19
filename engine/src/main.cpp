@@ -1,7 +1,7 @@
 #include <iostream>
 #include <string_view>
 
-#include "types.hpp"
+#include "bitboard.hpp"
 
 namespace {
     constexpr std::string_view kEngineName = "KnightLift";
@@ -12,6 +12,16 @@ int main() {
     using namespace KnightLift;
 
     std::cout << kEngineName << ' ' << kVersion << '\n';
-    std::cout << std::hex << square_bb(Square::E4) << '\n';
+    std::cout << bitboard_to_string(square_bb(Square::E4)) << '\n';
+
+    Bitboard cross = file_bb(File::D) | rank_bb(Rank::R4);
+    std::cout << bitboard_to_string(cross);
+    std::cout << "popcount: " << popcount(cross) << '\n';
+
+    std::cout << "squares:";
+    while (cross) {
+        std::cout << ' ' << to_index(pop_lsb(cross));
+    }
+    std::cout << '\n';
     return 0;
 }
