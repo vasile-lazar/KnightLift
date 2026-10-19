@@ -2,6 +2,7 @@
 #include <string_view>
 
 #include "position.hpp"
+#include "move.hpp"
 
 namespace {
     constexpr std::string_view kEngineName = "KnightLift";
@@ -44,5 +45,26 @@ int main() {
     std::cout << '\n' << pos.to_string();
     std::cout << "occupied: " << popcount(pos.occupied()) << '\n';
     std::cout << bitboard_to_string(pos.pieces(Color::White, PieceType::Pawn));
+
+    const Move sampleMoves[] = {
+        Move(Square::E2, Square::E4, MoveFlag::DoublePush),
+        Move(Square::G1, Square::F3, MoveFlag::Quiet),
+        Move(Square::E4, Square::D5, MoveFlag::Capture),
+        Move(Square::E1, Square::G1, MoveFlag::KingCastle),
+        Move(Square::E7, Square::E8, MoveFlag::PromoQueen),
+        Move(Square::B7, Square::A8, MoveFlag::PromoCaptureKnight),
+        Move::none(),
+    };
+
+    MoveList list;
+    for (const Move m : sampleMoves) {
+        list.push(m);
+    }
+
+    for (const Move m : list) {
+        std::cout << move_to_uci(m) << (m.is_capture() ? " capture" : "")
+                  << (m.is_promotion() ? " promotion" : "") << '\n';
+    }
+    std::cout << "moves: " << list.size() << ", sizeof(Move) = " << sizeof(Move) << '\n';
     return 0;
 }
