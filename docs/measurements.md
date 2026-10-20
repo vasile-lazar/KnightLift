@@ -14,7 +14,7 @@
 ## Results
 Every result needs: date, git commit, compiler, flags, build type.
 
-| Date       | Commit                                   | Test                                     | Result   | Compiler / flags                |
-|------------|------------------------------------------|------------------------------------------|----------|---------------------------------|
-| 2026-10-19 | b97b38d04e84ff2447994662a7a7b94012cab922 | init_attacks (PEXT tables, 107k entries) | 5.642 ms | GCC, -O3 -march=native, Release |
-| 2026-10-20 | <commit> | perft startpos depth 5, baseline (pseudo-legal + make/check/unmake) | 61.6802 Mnps | GCC, -O3 -march=native, Release |
+| Date       | Commit                                   | Test                                                                | Result       | Compiler / flags                |
+|------------|------------------------------------------|---------------------------------------------------------------------|--------------|---------------------------------|
+| 2026-10-19 | b97b38d04e84ff2447994662a7a7b94012cab922 | init_attacks (PEXT tables, 107k entries)                            | 5.642 ms     | GCC, -O3 -march=native, Release |
+| 2026-10-20 | 8e97ee96f95eca90b412ddd725b07cf063f64546 | perft startpos depth 5, baseline (pseudo-legal + make/check/unmake) | 61.6802 Mnps | GCC, -O3 -march=native, Release |
