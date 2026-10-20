@@ -6,6 +6,7 @@ add_library(KnightLift_core STATIC
         src/attacks.cpp
         src/movegen.cpp
         src/perft.cpp
+        src/uci.cpp
 )
 target_include_directories(KnightLift_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
@@ -20,3 +21,6 @@ endif()
 
 add_executable(KnightLift src/main.cpp)
 target_link_libraries(KnightLift PRIVATE KnightLift_core)
+if(MINGW)
+    target_link_options(KnightLift PRIVATE -static)
+endif()
