@@ -11,7 +11,7 @@
 #include "../engine/src/perft.hpp"
 #include "../engine/src/position.hpp"
 #include "../engine/src/uci.hpp"
-
+#include "../engine/src/search.hpp"
 using namespace KnightLift;
 
 namespace {
@@ -217,6 +217,22 @@ namespace {
         const std::string normal = run_uci("position startpos\ngo\nquit\n");
         check(has(normal, "bestmove ") && !has(normal, "bestmove 0000"), "uci bestmove from startpos");
     }
+
+    void test_search() {
+        Position pos;
+
+        pos.set_from_fen("6k1/5ppp/8/8/8/8/8/R3K3 w - - 0 1");
+        SearchResult r = search(pos, 2);
+        check(move_to_uci(r.best) == "a1a8" && r.score == kMateScore - 1, "search: back-rank mate in 1");
+
+        pos.set_from_fen("4k3/8/8/3q4/8/8/8/3QK3 w - - 0 1");
+        r = search(pos, 3);
+        check(move_to_uci(r.best) == "d1d5", "search: wins a free queen");
+
+        // Without pruning, nodes at depth N = perft(1) + ... + perft(N).
+        pos.set_from_fen(std::string(kStartFen));
+        check(search(pos, 3).nodes == 20 + 400 + 8902, "search: node count equals perft sum");
+    }
 } // namespace
 
 int main() {
@@ -228,6 +244,7 @@ int main() {
     test_make_unmake();
     test_perft();
     test_uci();
+    test_search();
 
     std::cout << (gFailures == 0 ? "ALL TESTS PASSED" : "TESTS FAILED") << '\n';
     return gFailures == 0 ? 0 : 1;

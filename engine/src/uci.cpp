@@ -2,7 +2,7 @@
 
 #include <istream>
 #include <ostream>
-#include <random>
+#include <chrono>
 #include <sstream>
 #include <string>
 
@@ -10,10 +10,16 @@
 #include "perft.hpp"
 #include "position.hpp"
 #include "version.hpp"
+#include "search.hpp"
 
 namespace KnightLift {
 
 namespace {
+    std::string score_string(int score) {
+        if (score > kMateBound) return "mate " + std::to_string((kMateScore - score + 1) / 2);
+        if (score < -kMateBound) return "mate -" + std::to_string((kMateScore + score + 1) / 2);
+        return "cp " + std::to_string(score);
+    }
 
 class UciEngine {
 public:
@@ -88,33 +94,42 @@ private:
         }
     }
 
-    void handle_go(std::istringstream& args) {
+        void handle_go(std::istringstream& args) {
+        int depth = 4;  // fixed depth until time management exists
         std::string token;
-        args >> token;
-
-        if (token == "perft") {
-            int depth = 1;
-            args >> depth;
-            const std::uint64_t total = perft_divide(pos_, depth, out_);
-            out_ << "\nNodes searched: " << total << std::endl;
-            return;
+        while (args >> token) {
+            if (token == "perft") {
+                int n = 1;
+                args >> n;
+                const std::uint64_t total = perft_divide(pos_, n, out_);
+                out_ << "\nNodes searched: " << total << std::endl;
+                return;
+            }
+            if (token == "depth") args >> depth;
         }
+        run_search(depth);
+    }
 
-        // Placeholder until the search exists: play a random legal move.
-        MoveList legal;
-        generate_legal(pos_, legal);
-        if (legal.empty()) {
+        void run_search(int depth) {
+        const auto start = std::chrono::steady_clock::now();
+        const SearchResult r = search(pos_, depth);
+        const auto elapsed = std::chrono::steady_clock::now() - start;
+        const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count();
+
+        if (r.best.is_none()) {
             out_ << "bestmove 0000" << std::endl;
             return;
         }
-        std::uniform_int_distribution<std::size_t> pick(0, legal.size() - 1);
-        out_ << "bestmove " << move_to_uci(legal[pick(rng_)]) << std::endl;
+
+        out_ << "info depth " << depth << " score " << score_string(r.score)
+             << " nodes " << r.nodes << " time " << ms;
+        if (ms > 0) out_ << " nps " << r.nodes * 1000 / static_cast<std::uint64_t>(ms);
+        out_ << '\n' << "bestmove " << move_to_uci(r.best) << std::endl;
     }
 
     std::istream& in_;
     std::ostream& out_;
     Position pos_;
-    std::mt19937 rng_{std::random_device{}()};
 };
 
 }  // namespace
