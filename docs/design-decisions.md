@@ -120,7 +120,7 @@ which alternatives existed, and why.
 - Known caveat: PEXT is microcoded and slow on AMD Zen 1/2, so a
   magic-bitboard fallback is planned (1e-3c).
 
-## 1e-4. Attack queries and pseudo-legal move generation (2026-10-19)
+## 1e-4. Attack queries and pseudo-legal move generation (2026-10-20)
 - Position::attackers_to(sq, occupied) uses attack symmetry (attackers of sq
   by color c = attacks_of(~c, sq) & pieces(c, type)); occupancy is a
   parameter so later code can test hypothetical boards (king moves, pins).
@@ -132,6 +132,18 @@ which alternatives existed, and why.
 - FEN now rejects pawns on the first/last rank.
 - Verified on four hand-counted positions (start 20, castling 26,
   promotion 7, en passant 7).
+
+## 1e-5. Make / unmake (2026-10-20)
+- Irreversible state (captured piece, castling rights, en passant square,
+  halfmove clock) is pushed on a fixed 2048-entry stack per move; unmake
+  pops it. Alternative considered: copy-make (copy the Position per move).
+- Castling rights updated with a per-square mask table
+  (rights &= mask[from] & mask[to]).
+- All board edits go through put/remove/move_piece; consistent() rebuilds
+  the bitboards from the mailbox as a debugging check.
+- Tested by a depth-3 make/unmake round trip over the full pseudo-legal
+  tree on seven positions: consistency after every make, exact FEN after
+  every unmake.
 
 ## Sources
 - Chess Programming Wiki: Bitboards, Square Mapping Considerations.
