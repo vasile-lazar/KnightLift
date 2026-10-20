@@ -6,10 +6,6 @@ namespace KnightLift {
 
 namespace {
 
-Square offset(Square s, int delta) {
-    return static_cast<Square>(static_cast<int>(to_index(s)) + delta);
-}
-
 void add_targets(Square from, Bitboard targets, Bitboard enemies, MoveList& list) {
     while (targets) {
         const Square to = pop_lsb(targets);

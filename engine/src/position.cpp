@@ -1,6 +1,7 @@
 #include <charconv>
 #include <sstream>
 #include <system_error>
+#include <cassert>
 
 #include "position.hpp"
 #include "attacks.hpp"
@@ -9,6 +10,9 @@ namespace KnightLift {
     namespace {
         // Same order as the Piece enum: white pawn...king, then black pawn...king.
         constexpr std::string_view kPieceChars = "PNBRQKpnbrqk";
+
+        constexpr CastlingRights kAllCastling =
+                kWhiteKingside | kWhiteQueenside | kBlackKingside | kBlackQueenside;
 
         constexpr Square square_at(int file, int rank) {
             return make_square(static_cast<File>(file), static_cast<Rank>(rank));
@@ -20,6 +24,20 @@ namespace KnightLift {
             const auto [ptr, ec] = std::from_chars(first, last, out);
             return ec == std::errc{} && ptr == last;
         }
+
+        constexpr std::array<CastlingRights, kNumSquares> make_castling_mask() {
+            std::array<CastlingRights, kNumSquares> mask{};
+            for (CastlingRights &m: mask) m = kAllCastling;
+            mask[to_index(Square::A1)] = kAllCastling & ~kWhiteQueenside;
+            mask[to_index(Square::H1)] = kAllCastling & ~kWhiteKingside;
+            mask[to_index(Square::E1)] = kAllCastling & ~(kWhiteKingside | kWhiteQueenside);
+            mask[to_index(Square::A8)] = kAllCastling & ~kBlackQueenside;
+            mask[to_index(Square::H8)] = kAllCastling & ~kBlackKingside;
+            mask[to_index(Square::E8)] = kAllCastling & ~(kBlackKingside | kBlackQueenside);
+            return mask;
+        }
+
+        constexpr std::array<CastlingRights, kNumSquares> kCastlingMask = make_castling_mask();
     } // namespace
 
     void Position::clear() {
@@ -32,6 +50,7 @@ namespace KnightLift {
         epSquare_ = Square::None;
         halfmoveClock_ = 0;
         fullmoveNumber_ = 1;
+        historyPly_ = 0;
     }
 
     void Position::put_piece(Piece p, Square s) {
@@ -212,5 +231,122 @@ namespace KnightLift {
 
     bool Position::is_attacked(Square s, Color by) const {
         return (attackers_to(s, occupied_) & pieces(by)) != 0;
+    }
+
+    void Position::remove_piece(Square s) {
+        const Piece p = board_[to_index(s)];
+        const Bitboard bb = square_bb(s);
+        pieceBB_[to_index(p)] ^= bb;
+        colorBB_[to_index(color_of(p))] ^= bb;
+        occupied_ ^= bb;
+        board_[to_index(s)] = Piece::None;
+    }
+
+    // Precondition: `to` is empty.
+    void Position::move_piece(Square from, Square to) {
+        const Piece p = board_[to_index(from)];
+        const Bitboard fromTo = square_bb(from) | square_bb(to);
+        pieceBB_[to_index(p)] ^= fromTo;
+        colorBB_[to_index(color_of(p))] ^= fromTo;
+        occupied_ ^= fromTo;
+        board_[to_index(from)] = Piece::None;
+        board_[to_index(to)] = p;
+    }
+
+    void Position::make_move(Move m) {
+        assert(historyPly_ < kMaxGamePly);
+        const Square from = m.from();
+        const Square to = m.to();
+        const Color us = sideToMove_;
+        const Piece moving = board_[to_index(from)];
+
+        State &st = history_[historyPly_++];
+        st.captured = Piece::None;
+        st.castling = castling_;
+        st.epSquare = epSquare_;
+        st.halfmoveClock = halfmoveClock_;
+
+        ++halfmoveClock_;
+        epSquare_ = Square::None;
+
+        if (m.flag() == MoveFlag::EnPassant) {
+            const Square victim = offset(to, us == Color::White ? -8 : 8);
+            st.captured = board_[to_index(victim)];
+            remove_piece(victim);
+            halfmoveClock_ = 0;
+        } else if (m.is_capture()) {
+            st.captured = board_[to_index(to)];
+            remove_piece(to);
+            halfmoveClock_ = 0;
+        }
+
+        move_piece(from, to);
+
+        if (type_of(moving) == PieceType::Pawn) {
+            halfmoveClock_ = 0;
+            if (m.flag() == MoveFlag::DoublePush) {
+                epSquare_ = offset(from, us == Color::White ? 8 : -8);
+            } else if (m.is_promotion()) {
+                remove_piece(to);
+                put_piece(make_piece(us, m.promotion_type()), to);
+            }
+        }
+
+        if (m.flag() == MoveFlag::KingCastle) {
+            move_piece(offset(to, 1), offset(to, -1));
+        } else if (m.flag() == MoveFlag::QueenCastle) {
+            move_piece(offset(to, -2), offset(to, 1));
+        }
+
+        castling_ &= kCastlingMask[to_index(from)] & kCastlingMask[to_index(to)];
+        if (us == Color::Black) ++fullmoveNumber_;
+        sideToMove_ = ~us;
+    }
+
+    void Position::unmake_move(Move m) {
+        assert(historyPly_ > 0);
+        sideToMove_ = ~sideToMove_;
+        const Color us = sideToMove_;
+        const Square from = m.from();
+        const Square to = m.to();
+        const State &st = history_[--historyPly_];
+
+        if (us == Color::Black) --fullmoveNumber_;
+
+        if (m.is_promotion()) {
+            remove_piece(to);
+            put_piece(make_piece(us, PieceType::Pawn), to);
+        }
+        move_piece(to, from);
+
+        if (m.flag() == MoveFlag::EnPassant) {
+            put_piece(st.captured, offset(to, us == Color::White ? -8 : 8));
+        } else if (m.is_capture()) {
+            put_piece(st.captured, to);
+        } else if (m.flag() == MoveFlag::KingCastle) {
+            move_piece(offset(to, -1), offset(to, 1));
+        } else if (m.flag() == MoveFlag::QueenCastle) {
+            move_piece(offset(to, 1), offset(to, -2));
+        }
+
+        castling_ = st.castling;
+        epSquare_ = st.epSquare;
+        halfmoveClock_ = st.halfmoveClock;
+    }
+
+    bool Position::consistent() const {
+        std::array<Bitboard, kNumPieces> bb{};
+        for (std::size_t i = 0; i < kNumSquares; ++i) {
+            const Piece p = board_[i];
+            if (p != Piece::None) bb[to_index(p)] |= square_bb(static_cast<Square>(i));
+        }
+        Bitboard white = 0;
+        Bitboard black = 0;
+        for (std::size_t t = 0; t < kNumPieceTypes; ++t) {
+            white |= bb[t];
+            black |= bb[t + kNumPieceTypes];
+        }
+        return bb == pieceBB_ && white == colorBB_[0] && black == colorBB_[1] &&
+               (white | black) == occupied_;
     }
 } // namespace KnightLift

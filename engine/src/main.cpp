@@ -57,6 +57,22 @@ namespace {
                   << " moves: " << fen << '\n';
     }
 
+    bool roundtrip(KnightLift::Position& pos, int depth) {
+        using namespace KnightLift;
+        if (depth == 0) return true;
+
+        const std::string before = pos.to_fen();
+        MoveList list;
+        generate_pseudo_legal(pos, list);
+        for (const Move m : list) {
+            pos.make_move(m);
+            const bool ok = pos.consistent() && roundtrip(pos, depth - 1);
+            pos.unmake_move(m);
+            if (!ok || !pos.consistent() || pos.to_fen() != before) return false;
+        }
+        return true;
+    }
+
 }  // namespace
 
 int main() {
@@ -129,5 +145,17 @@ int main() {
     check_move_count(pos, "8/P7/8/8/8/8/8/k6K w - - 0 1", 7);
     check_move_count(pos, "4k3/8/8/3pP3/8/8/8/4K3 w - d6 0 1", 7);
 
+    bool allOk = true;
+    for (const std::string_view fen : kRoundTripFens) {
+        pos.set_from_fen(fen);
+        allOk = roundtrip(pos, 3) && allOk;
+    }
+    for (const std::string_view fen : {"r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1",
+                                       "8/P7/8/8/8/8/8/k6K w - - 0 1",
+                                       "4k3/8/8/3pP3/8/8/8/4K3 w - d6 0 1"}) {
+        pos.set_from_fen(fen);
+        allOk = roundtrip(pos, 3) && allOk;
+                                       }
+    std::cout << "make/unmake round trip (depth 3): " << (allOk ? "OK" : "FAIL") << '\n';
     return 0;
 }

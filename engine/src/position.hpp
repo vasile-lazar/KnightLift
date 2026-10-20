@@ -4,9 +4,11 @@
 #include <cstdint>
 #include <string>
 #include <string_view>
+#include <cstddef>
 
 #include "bitboard.hpp"
 #include "types.hpp"
+#include "move.hpp"
 
 namespace KnightLift {
 
@@ -50,11 +52,26 @@ namespace KnightLift {
         bool is_attacked(Square s, Color by) const;
         bool in_check() const { return is_attacked(king_square(sideToMove_), ~sideToMove_); }
         Piece piece_on(Square s) const { return board_[to_index(s)]; }
+        void make_move(Move m);
+        void unmake_move(Move m);
+        bool consistent() const;  // debug: bitboards agree with the mailbox
 
     private:
         void clear();
         void put_piece(Piece p, Square s);
+        void remove_piece(Square s);
+        void move_piece(Square from, Square to);
 
+        struct State {
+            Piece captured = Piece::None;
+            CastlingRights castling = 0;
+            Square epSquare = Square::None;
+            int halfmoveClock = 0;
+        };
+
+        static constexpr std::size_t kMaxGamePly = 2048;
+        std::array<State, kMaxGamePly> history_;
+        std::size_t historyPly_ = 0;
         std::array<Bitboard, kNumPieces> pieceBB_;
         std::array<Bitboard, kNumColors> colorBB_;
         Bitboard occupied_;
