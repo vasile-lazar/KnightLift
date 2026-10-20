@@ -5,6 +5,7 @@ add_executable(KnightLift
         src/bitboard.cpp
         src/position.cpp
         src/attacks.cpp
+        src/movegen.cpp
 )
 
 if(MSVC)

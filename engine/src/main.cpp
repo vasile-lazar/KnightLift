@@ -5,6 +5,7 @@
 #include "attacks.hpp"
 #include "position.hpp"
 #include "move.hpp"
+#include "movegen.hpp"
 
 namespace {
     constexpr std::string_view kEngineName = "KnightLift";
@@ -46,6 +47,14 @@ namespace {
             }
         }
         return true;
+    }
+
+    void check_move_count(KnightLift::Position& pos, std::string_view fen, std::size_t expected) {
+        pos.set_from_fen(fen);
+        KnightLift::MoveList list;
+        KnightLift::generate_pseudo_legal(pos, list);
+        std::cout << (list.size() == expected ? "OK   " : "FAIL ") << list.size()
+                  << " moves: " << fen << '\n';
     }
 
 }  // namespace
@@ -114,6 +123,11 @@ int main() {
     const Bitboard bishopBlockers = square_bb(Square::F5) | square_bb(Square::C2);
     std::cout << "bishop e4, blockers f5 c2:\n"
               << bitboard_to_string(bishop_attacks_reference(Square::E4, bishopBlockers));
+
+    check_move_count(pos, kStartFen, 20);
+    check_move_count(pos, "r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1", 26);
+    check_move_count(pos, "8/P7/8/8/8/8/8/k6K w - - 0 1", 7);
+    check_move_count(pos, "4k3/8/8/3pP3/8/8/8/4K3 w - d6 0 1", 7);
 
     return 0;
 }

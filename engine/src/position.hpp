@@ -40,6 +40,15 @@ namespace KnightLift {
         Bitboard pieces(Color c, PieceType pt) const {
             return pieceBB_[to_index(make_piece(c, pt))];
         }
+        Bitboard pieces(PieceType pt) const {
+            return pieceBB_[to_index(make_piece(Color::White, pt))] |
+                   pieceBB_[to_index(make_piece(Color::Black, pt))];
+        }
+        Square king_square(Color c) const { return lsb(pieces(c, PieceType::King)); }
+
+        Bitboard attackers_to(Square s, Bitboard occupied) const;  // pieces of both colors
+        bool is_attacked(Square s, Color by) const;
+        bool in_check() const { return is_attacked(king_square(sideToMove_), ~sideToMove_); }
         Piece piece_on(Square s) const { return board_[to_index(s)]; }
 
     private:

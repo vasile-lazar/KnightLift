@@ -206,6 +206,18 @@ namespace KnightLift {
         return bishop_attacks(s, occupied) | rook_attacks(s, occupied);
     }
 
+    // Attacks of any non-pawn piece.
+    inline Bitboard piece_attacks(PieceType pt, Square s, Bitboard occupied) {
+        switch (pt) {
+            case PieceType::Knight: return knight_attacks(s);
+            case PieceType::Bishop: return bishop_attacks(s, occupied);
+            case PieceType::Rook: return rook_attacks(s, occupied);
+            case PieceType::Queen: return queen_attacks(s, occupied);
+            case PieceType::King: return king_attacks(s);
+            default: return 0;
+        }
+    }
+
     // ---- Compile-time sanity checks -------------------------------------------
 
     static_assert(knight_attacks(Square::A1) == (square_bb(Square::B3) | square_bb(Square::C2)));
