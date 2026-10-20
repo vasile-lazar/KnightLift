@@ -156,5 +156,15 @@ which alternatives existed, and why.
   knightlift_tests executable registered in CTest; flags and include path are
   PUBLIC on the library so all targets compile consistently.
 
+## 2a. UCI front end (2026-10-20)
+- uci_loop(istream, ostream): testable by scripting input. Supports uci,
+  isready, ucinewgame, position (startpos/fen + moves), go, quit, plus d and
+  "go perft N". Unknown commands ignored per spec.
+- Moves in "position ... moves" are matched against the legal move list; a
+  bad FEN is parsed into a temporary Position so state is never corrupted.
+- go currently plays a random legal move (placeholder for search); used to
+  validate movegen and protocol handling in a GUI.
+- Replies are flushed (std::endl): a pipe is fully buffered and would hang the GUI.
+
 ## Sources
 - Chess Programming Wiki: Bitboards, Square Mapping Considerations.
