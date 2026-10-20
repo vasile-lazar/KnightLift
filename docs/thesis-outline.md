@@ -8,7 +8,7 @@
     - Protocolul UCI
 3. KnightLift Chess Engine
    3.1 Reprezentarea tablei și generarea mutărilor   <- stage 1 (done)
-   3.2 Protocolul UCI                                <- stage 2
+   3.2 Protocolul UCI                                <- stage 2 (done)
    3.3 Căutarea
    3.4 Evaluarea
    3.5 Rețea neuronală NNUE (antrenare, inferență)
