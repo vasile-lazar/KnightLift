@@ -1,6 +1,6 @@
 #include "perft.hpp"
 
-#include <iostream>
+#include <ostream>
 
 #include "movegen.hpp"
 
@@ -23,7 +23,7 @@ namespace KnightLift {
         return nodes;
     }
 
-    std::uint64_t perft_divide(Position& pos, int depth) {
+    std::uint64_t perft_divide(Position& pos, int depth, std::ostream& out) {
         MoveList list;
         generate_pseudo_legal(pos, list);
 
@@ -32,12 +32,11 @@ namespace KnightLift {
             pos.make_move(m);
             if (!pos.king_left_in_check()) {
                 const std::uint64_t n = (depth <= 1) ? 1 : perft(pos, depth - 1);
-                std::cout << move_to_uci(m) << ": " << n << '\n';
+                out << move_to_uci(m) << ": " << n << '\n';
                 total += n;
             }
             pos.unmake_move(m);
         }
-        std::cout << "total: " << total << '\n';
         return total;
     }
 

@@ -156,5 +156,26 @@ which alternatives existed, and why.
   knightlift_tests executable registered in CTest; flags and include path are
   PUBLIC on the library so all targets compile consistently.
 
+## 2a. UCI front end (2026-10-20)
+- uci_loop(istream, ostream): testable by scripting input. Supports uci,
+  isready, ucinewgame, position (startpos/fen + moves), go, quit, plus d and
+  "go perft N". Unknown commands ignored per spec.
+- Moves in "position ... moves" are matched against the legal move list; a
+  bad FEN is parsed into a temporary Position so state is never corrupted.
+- go currently plays a random legal move (placeholder for search); used to
+  validate movegen and protocol handling in a GUI.
+- Replies are flushed (std::endl): a pipe is fully buffered and would hang the GUI.
+
+## 3a. Evaluation and negamax (2026-10-20)
+- Negamax (score = -child score) with centipawn scores from the side to
+  move's view. Material-only evaluation (P100 N320 B330 R500 Q900).
+- Mate score kMateScore - ply (shorter mates preferred); no legal moves =
+  mate if in check, otherwise stalemate (0). Mate scores reported to UCI as
+  "mate N" in moves.
+- Legality via make / check / unmake, as in perft.
+- Sanity check: without pruning, nodes(depth N) = sum of perft(1..N).
+- Known gaps: horizon effect (quiescence, step 3d); no repetition or
+  50-move handling; deterministic first-move tie-break.
+
 ## Sources
 - Chess Programming Wiki: Bitboards, Square Mapping Considerations.

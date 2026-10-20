@@ -1,12 +1,10 @@
 #include <iostream>
-#include <string_view>
 
-namespace {
-    constexpr std::string_view kEngineName = "KnightLift";
-    constexpr std::string_view kVersion = "0.1.0";
-}  // namespace
+#include "attacks.hpp"
+#include "uci.hpp"
 
 int main() {
-    std::cout << kEngineName << ' ' << kVersion << '\n';
+    KnightLift::init_attacks();
+    KnightLift::uci_loop(std::cin, std::cout);
     return 0;
 }
