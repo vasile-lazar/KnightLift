@@ -145,5 +145,16 @@ which alternatives existed, and why.
   tree on seven positions: consistency after every make, exact FEN after
   every unmake.
 
+## 1e-6/1e-7. Legality, perft and test structure (2026-10-20)
+- Legality: make the pseudo-legal move, test whether the mover's king is
+  attacked, unmake if so. Simple baseline; a pin/check-aware generator is a
+  planned optimization.
+- Perft (counts of the legal-move tree) validated against six standard
+  positions (start, Kiwipete, positions 3-6, plus the mirror of position 4).
+  perft_divide gives per-root-move counts for debugging against another engine.
+- Structure: knightlift_core static library, knightlift executable,
+  knightlift_tests executable registered in CTest; flags and include path are
+  PUBLIC on the library so all targets compile consistently.
+
 ## Sources
 - Chess Programming Wiki: Bitboards, Square Mapping Considerations.
