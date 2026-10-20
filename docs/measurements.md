@@ -18,3 +18,22 @@ Every result needs: date, git commit, compiler, flags, build type.
 |------------|------------------------------------------|---------------------------------------------------------------------|--------------|---------------------------------|
 | 2026-10-19 | b97b38d04e84ff2447994662a7a7b94012cab922 | init_attacks (PEXT tables, 107k entries)                            | 5.642 ms     | GCC, -O3 -march=native, Release |
 | 2026-10-20 | 8e97ee96f95eca90b412ddd725b07cf063f64546 | perft startpos depth 5, baseline (pseudo-legal + make/check/unmake) | 61.6802 Mnps | GCC, -O3 -march=native, Release |
+
+
+
+## Nodes and time before alpha-beta comparison
+go depth 1
+info depth 1 score cp 0 nodes 20 time 0
+bestmove a2a3
+go depth 2
+info depth 2 score cp 0 nodes 420 time 0
+bestmove a2a3
+go depth 3
+info depth 3 score cp 0 nodes 9322 time 0
+bestmove a2a3
+go depth 4
+info depth 4 score cp 0 nodes 206603 time 3 nps 68867666
+bestmove a2a3
+go depth 5
+info depth 5 score cp 100 nodes 5072212 time 70 nps 72460171
+bestmove b2b3

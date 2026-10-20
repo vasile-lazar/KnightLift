@@ -166,5 +166,16 @@ which alternatives existed, and why.
   validate movegen and protocol handling in a GUI.
 - Replies are flushed (std::endl): a pipe is fully buffered and would hang the GUI.
 
+## 3a. Evaluation and negamax (2026-10-20)
+- Negamax (score = -child score) with centipawn scores from the side to
+  move's view. Material-only evaluation (P100 N320 B330 R500 Q900).
+- Mate score kMateScore - ply (shorter mates preferred); no legal moves =
+  mate if in check, otherwise stalemate (0). Mate scores reported to UCI as
+  "mate N" in moves.
+- Legality via make / check / unmake, as in perft.
+- Sanity check: without pruning, nodes(depth N) = sum of perft(1..N).
+- Known gaps: horizon effect (quiescence, step 3d); no repetition or
+  50-move handling; deterministic first-move tie-break.
+
 ## Sources
 - Chess Programming Wiki: Bitboards, Square Mapping Considerations.
