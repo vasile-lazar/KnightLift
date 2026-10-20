@@ -55,6 +55,10 @@ namespace KnightLift {
         void make_move(Move m);
         void unmake_move(Move m);
         bool consistent() const;  // debug: bitboards agree with the mailbox
+        // After make_move: true if the side that just moved left its own king attacked.
+        bool king_left_in_check() const {
+            return is_attacked(king_square(~sideToMove_), sideToMove_);
+        }
 
     private:
         void clear();

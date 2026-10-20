@@ -1,0 +1,3 @@
+add_executable(KnightLift_tests test_main.cpp)
+target_link_libraries(KnightLift_tests PRIVATE KnightLift_core)
+add_test(NAME KnightLift_tests COMMAND KnightLift_tests)
