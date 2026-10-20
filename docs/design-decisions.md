@@ -177,5 +177,14 @@ which alternatives existed, and why.
 - Known gaps: horizon effect (quiescence, step 3d); no repetition or
   50-move handling; deterministic first-move tie-break.
 
+## 3b. Alpha-beta (2026-10-20)
+- Negamax alpha-beta, fail-soft, window (-beta, -alpha) passed to children.
+  Same score and best move as plain minimax at equal depth, with fewer
+  nodes; plain minimax is kept (flag) as reference and for measurements.
+- Test: score/best move equality against minimax on five positions, depths
+  1-4. Node reduction recorded per depth (measurements.md).
+- Move ordering is still generation order; ordering (MVV-LVA, killers,
+  history) is stage 4 and should lower the effective branching factor further.
+
 ## Sources
 - Chess Programming Wiki: Bitboards, Square Mapping Considerations.
