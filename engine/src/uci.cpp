@@ -96,6 +96,7 @@ private:
 
         void handle_go(std::istringstream& args) {
         int depth = 4;  // fixed depth until time management exists
+        bool alphaBeta = true;
         std::string token;
         while (args >> token) {
             if (token == "perft") {
@@ -106,13 +107,14 @@ private:
                 return;
             }
             if (token == "depth") args >> depth;
+            if (token == "minimax") alphaBeta = false;
         }
-        run_search(depth);
+        run_search(depth, alphaBeta);
     }
 
-        void run_search(int depth) {
+        void run_search(int depth, bool alphaBeta) {
         const auto start = std::chrono::steady_clock::now();
-        const SearchResult r = search(pos_, depth);
+        const SearchResult r = search(pos_, depth, alphaBeta);
         const auto elapsed = std::chrono::steady_clock::now() - start;
         const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(elapsed).count();
 

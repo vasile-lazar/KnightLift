@@ -18,6 +18,7 @@ namespace KnightLift {
     };
 
     // Fixed-depth search. Returns Move::none() as best move if there are no legal moves.
-    SearchResult search(Position& pos, int depth);
+    // useAlphaBeta = false runs plain minimax, kept as a reference and for measurements.
+    SearchResult search(Position& pos, int depth, bool useAlphaBeta = true);
 
 }  // namespace KnightLift

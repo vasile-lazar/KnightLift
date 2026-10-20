@@ -11,6 +11,36 @@ namespace KnightLift {
         public:
             explicit Searcher(Position& pos) : pos_(pos) {}
 
+            int alphabeta(int depth, int ply, int alpha, int beta) {
+                ++nodes_;
+                if (depth == 0) return evaluate(pos_);
+
+                MoveList list;
+                generate_pseudo_legal(pos_, list);
+
+                int best = -kInfinity;
+                bool hasLegalMove = false;
+                for (const Move m : list) {
+                    pos_.make_move(m);
+                    if (pos_.king_left_in_check()) {
+                        pos_.unmake_move(m);
+                        continue;
+                    }
+                    hasLegalMove = true;
+                    const int score = -alphabeta(depth - 1, ply + 1, -beta, -alpha);
+                    pos_.unmake_move(m);
+
+                    if (score > best) {
+                        best = score;
+                        if (score > alpha) alpha = score;
+                    }
+                    if (alpha >= beta) break;  // cutoff: the opponent won't allow this line
+                }
+
+                if (!hasLegalMove) return pos_.in_check() ? -kMateScore + ply : 0;
+                return best;
+            }
+
             int negamax(int depth, int ply) {
                 ++nodes_;
                 if (depth == 0) return evaluate(pos_);
@@ -45,7 +75,7 @@ namespace KnightLift {
 
     }  // namespace
 
-    SearchResult search(Position& pos, int depth) {
+    SearchResult search(Position& pos, int depth, bool useAlphaBeta) {
         if (depth < 1) depth = 1;
 
         Searcher searcher(pos);
@@ -60,7 +90,9 @@ namespace KnightLift {
                 pos.unmake_move(m);
                 continue;
             }
-            const int score = -searcher.negamax(depth - 1, 1);
+            const int score = useAlphaBeta
+                      ? -searcher.alphabeta(depth - 1, 1, -kInfinity, -result.score)
+                      : -searcher.negamax(depth - 1, 1);
             pos.unmake_move(m);
             if (score > result.score) {
                 result.score = score;

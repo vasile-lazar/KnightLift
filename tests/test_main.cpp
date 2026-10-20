@@ -231,7 +231,39 @@ namespace {
 
         // Without pruning, nodes at depth N = perft(1) + ... + perft(N).
         pos.set_from_fen(std::string(kStartFen));
-        check(search(pos, 3).nodes == 20 + 400 + 8902, "search: node count equals perft sum");
+        check(search(pos, 3, false).nodes == 20 + 400 + 8902, "search: node count equals perft sum");
+    }
+
+    void test_alphabeta() {
+        constexpr std::string_view fens[] = {
+            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+            "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
+            "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1",
+            "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8",
+            "6k1/5ppp/8/8/8/8/8/R3K3 w - - 0 1",
+        };
+
+        Position pos;
+        for (const std::string_view fen : fens) {
+            for (int depth = 1; depth <= 4; ++depth) {
+                pos.set_from_fen(fen);
+                const SearchResult full = search(pos, depth, false);
+                pos.set_from_fen(fen);
+                const SearchResult pruned = search(pos, depth, true);
+
+                const std::string what = std::string(fen) + " depth " + std::to_string(depth);
+                check(pruned.score == full.score && pruned.best == full.best,
+                      "alpha-beta equals minimax: " + what);
+                check(pruned.nodes <= full.nodes, "alpha-beta never searches more: " + what);
+
+                if (depth == 4) {
+                    std::cout << "depth 4 nodes minimax " << full.nodes << ", alpha-beta "
+                              << pruned.nodes << " (" << static_cast<double>(full.nodes) /
+                                                             static_cast<double>(pruned.nodes)
+                              << "x fewer)\n";
+                }
+            }
+        }
     }
 } // namespace
 
@@ -245,6 +277,7 @@ int main() {
     test_perft();
     test_uci();
     test_search();
+    test_alphabeta();
 
     std::cout << (gFailures == 0 ? "ALL TESTS PASSED" : "TESTS FAILED") << '\n';
     return gFailures == 0 ? 0 : 1;
