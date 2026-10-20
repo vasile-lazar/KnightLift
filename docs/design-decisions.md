@@ -120,5 +120,18 @@ which alternatives existed, and why.
 - Known caveat: PEXT is microcoded and slow on AMD Zen 1/2, so a
   magic-bitboard fallback is planned (1e-3c).
 
+## 1e-4. Attack queries and pseudo-legal move generation (2026-10-19)
+- Position::attackers_to(sq, occupied) uses attack symmetry (attackers of sq
+  by color c = attacks_of(~c, sq) & pieces(c, type)); occupancy is a
+  parameter so later code can test hypothetical boards (king moves, pins).
+- Movegen is pseudo-legal (pins/self-check filtered after make in 1e-6);
+  castling is fully checked at generation (rights, empty squares, king not
+  in check, path and destination not attacked).
+- Pawns are generated per pawn (simple); bulk-shift version is a candidate
+  optimization to measure.
+- FEN now rejects pawns on the first/last rank.
+- Verified on four hand-counted positions (start 20, castling 26,
+  promotion 7, en passant 7).
+
 ## Sources
 - Chess Programming Wiki: Bitboards, Square Mapping Considerations.

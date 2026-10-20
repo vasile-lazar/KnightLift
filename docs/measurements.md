@@ -14,6 +14,6 @@
 ## Results
 Every result needs: date, git commit, compiler, flags, build type.
 
-| Date       | Commit   | Test                                     | Result   | Compiler / flags                |
-|------------|----------|------------------------------------------|----------|---------------------------------|
-| 2026-10-19 | <commit> | init_attacks (PEXT tables, 107k entries) | 5.642 ms | GCC, -O3 -march=native, Release |
+| Date       | Commit                                   | Test                                     | Result   | Compiler / flags                |
+|------------|------------------------------------------|------------------------------------------|----------|---------------------------------|
+| 2026-10-19 | b97b38d04e84ff2447994662a7a7b94012cab922 | init_attacks (PEXT tables, 107k entries) | 5.642 ms | GCC, -O3 -march=native, Release |
