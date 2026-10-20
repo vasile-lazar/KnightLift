@@ -108,7 +108,16 @@ public:
 
     const Move* begin() const { return moves_.data(); }
     const Move* end() const { return moves_.data() + size_; }
-
+    // Moves m (if present) to the front, keeping the order of the others.
+    void move_to_front(Move m) {
+        for (std::size_t i = 0; i < size_; ++i) {
+            if (moves_[i] == m) {
+                for (; i > 0; --i) moves_[i] = moves_[i - 1];
+                moves_[0] = m;
+                return;
+            }
+        }
+    }
 private:
     std::array<Move, kMaxMoves> moves_;
     std::size_t size_ = 0;

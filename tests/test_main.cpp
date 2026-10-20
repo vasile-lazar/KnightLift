@@ -5,6 +5,7 @@
 #include <string>
 #include <string_view>
 #include <sstream>
+#include <atomic>
 
 #include "../engine/src/attacks.hpp"
 #include "../engine/src/movegen.hpp"
@@ -199,24 +200,51 @@ namespace {
     }
 
     void test_uci() {
-        const auto has = [](const std::string &text, const std::string &part) {
-            return text.find(part) != std::string::npos;
-        };
+    const auto has = [](const std::string& text, const std::string& part) {
+        return text.find(part) != std::string::npos;
+    };
 
-        const std::string handshake = run_uci("uci\nisready\nquit\n");
-        check(has(handshake, "uciok") && has(handshake, "readyok"), "uci handshake");
+    const std::string handshake = run_uci("uci\nisready\nquit\n");
+    check(has(handshake, "uciok") && has(handshake, "readyok"), "uci handshake");
 
-        // After 1.e4 e5 White has 29 legal moves.
-        const std::string perft1 = run_uci("position startpos moves e2e4 e7e5\ngo perft 1\nquit\n");
-        check(has(perft1, "Nodes searched: 29"), "uci position + go perft");
+    // After 1.e4 e5 White has 29 legal moves.
+    const std::string perft1 = run_uci("position startpos moves e2e4 e7e5\ngo perft 1\n");
+    check(has(perft1, "Nodes searched: 29"), "uci position + go perft");
 
-        // Stalemate: no legal move.
-        const std::string stalemate = run_uci("position fen 7k/5Q2/6K1/8/8/8/8/8 b - - 0 1\ngo\nquit\n");
-        check(has(stalemate, "bestmove 0000"), "uci stalemate bestmove");
+    // Stalemate: no legal move.
+    const std::string stalemate = run_uci("position fen 7k/5Q2/6K1/8/8/8/8/8 b - - 0 1\ngo\n");
+    check(has(stalemate, "bestmove 0000"), "uci stalemate bestmove");
 
-        const std::string normal = run_uci("position startpos\ngo\nquit\n");
-        check(has(normal, "bestmove ") && !has(normal, "bestmove 0000"), "uci bestmove from startpos");
-    }
+    const std::string normal = run_uci("position startpos\ngo depth 3\n");
+    check(has(normal, "bestmove ") && !has(normal, "bestmove 0000"), "uci bestmove from startpos");
+
+    const std::string mate = run_uci("position fen 6k1/5ppp/8/8/8/8/8/R3K3 w - - 0 1\ngo depth 4\n");
+    check(has(mate, "bestmove a1a8") && has(mate, "score mate 1"), "uci finds mate in 1");
+}
+
+void test_search_iterative() {
+    Position pos;
+    pos.set_from_fen("r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1");
+    const std::string before = pos.to_fen();
+
+    SearchLimits limits;
+    limits.hardMs = limits.optimumMs = 100;
+    std::atomic<bool> stop{false};
+
+    const auto start = std::chrono::steady_clock::now();
+    const SearchResult r = search_iterative(pos, limits, stop, nullptr);
+    const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                        std::chrono::steady_clock::now() - start).count();
+
+    check(!r.best.is_none(), "iterative search returns a move");
+    check(ms < 1000, "iterative search respects its time limit");
+    check(pos.to_fen() == before && pos.consistent(), "aborted search restores the position");
+
+    pos.set_from_fen("6k1/5ppp/8/8/8/8/8/R3K3 w - - 0 1");
+    const SearchResult m = search_iterative(pos, SearchLimits{}, stop, nullptr);
+    check(move_to_uci(m.best) == "a1a8" && m.score == kMateScore - 1,
+          "iterative search finds mate in 1");
+}
 
     void test_search() {
         Position pos;
@@ -278,6 +306,7 @@ int main() {
     test_uci();
     test_search();
     test_alphabeta();
+    test_search_iterative();
 
     std::cout << (gFailures == 0 ? "ALL TESTS PASSED" : "TESTS FAILED") << '\n';
     return gFailures == 0 ? 0 : 1;
