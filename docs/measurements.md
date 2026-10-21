@@ -87,12 +87,15 @@ bestmove a2a3
 4c: 21,843,147 nodes in 1.1 seconds
 4d: 16,985,289 nodes in 0.8 seconds
 4e: 17,364,113 nodes in 0.94 seconds
-
-## 2×2 table (bench 7, Release, total nodes)
+4f: 2,894,330 nodes in 0.2 seconds
+5a: 6,178,242 nodes in 0.5 seconds
 
 | 	            | history off         | 	history on          |
 |--------------|---------------------|----------------------|
 | NullMove off | 16,985,289 (806 ms) | 	17,364,113 (930 ms) |
 | NullMove on	 | 2,795,472 (192 ms)  | 2,894,330 (205 ms)   |                 
 
-## bench on depth 8
+### 5a vs 4f (cutechess-cli, tc 8+0.08, Hash 16, 8moves_v3, -repeat, concurrency 6)
+- Builds: 4f bench7 = 2,894,330 nodes; 5a bench7 = 6,178,242 nodes (Release, GCC).
+- Result: 13-0-2 in 15 finished games (5 unfinished games discarded at SPRT stop). SPRT elo0=0 elo1=50 alpha=beta=0.05: H1 accepted (LLR 3.17).
+- Elo point estimate +458 (error bar undefined, too few games). No illegal moves, no time losses.
