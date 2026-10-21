@@ -29,20 +29,25 @@ Every result needs: date, git commit, compiler, flags, build type.
 | 4     | 206603        | 2011             | 2 ms        |
 | 5     | 5072212       | 37143            | 79 ms       |
 
-## Nodes and time before alpha-beta comparison
+## 3d vs 3c engine versions with a opening book
 
-go depth 1
-info depth 1 score cp 0 nodes 20 time 0
-bestmove a2a3
-go depth 2
-info depth 2 score cp 0 nodes 420 time 0
-bestmove a2a3
-go depth 3
-info depth 3 score cp 0 nodes 9322 time 0
-bestmove a2a3
-go depth 4
-info depth 4 score cp 0 nodes 206603 time 3 nps 68867666
-bestmove a2a3
-go depth 5
-info depth 5 score cp 100 nodes 5072212 time 70 nps 72460171
-bestmove b2b3
+Score of KL_3d vs KL_3c: 9 - 8 - 33  [0.510] 50
+...      KL_3d playing White: 6 - 2 - 17  [0.580] 25
+...      KL_3d playing Black: 3 - 6 - 16  [0.440] 25
+...      White vs Black: 12 - 5 - 33  [0.570] 50
+Elo difference: 6.9 +/- 56.6, LOS: 59.6 %, DrawRatio: 66.0 %
+SPRT: llr 0 (0.0%), lbound -inf, ubound inf
+
+Player: KL_3d
+"Draw by 3-fold repetition": 33
+"Loss: Black mates": 2
+"Loss: White mates": 6
+"Win: Black mates": 3
+"Win: White mates": 6
+Player: KL_3c
+"Draw by 3-fold repetition": 33
+"Loss: Black mates": 3
+"Loss: White mates": 6
+"Win: Black mates": 2
+"Win: White mates": 6
+Finished match

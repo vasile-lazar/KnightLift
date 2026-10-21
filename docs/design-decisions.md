@@ -186,5 +186,29 @@ which alternatives existed, and why.
 - Move ordering is still generation order; ordering (MVV-LVA, killers,
   history) is stage 4 and should lower the effective branching factor further.
 
+## 3c. Iterative deepening and time management (2026-10-20)
+- Iterative deepening; previous iteration's best move is searched first at
+  the root. Depth 1 always completes, so a move always exists. Aborted
+  iterations are discarded; the position is restored on abort.
+- Stop/clock checked every 2048 nodes. Time: movetime - 30 ms; otherwise
+  optimum = time/movesToGo(30) + 3/4 inc, hard limit = min(3*optimum,
+  time - 30 ms); no new iteration after optimum/2. Constants to be tuned
+  with SPRT (stage 6).
+- Search runs on its own thread; output serialized by a mutex; commands
+  touching the position wait for the search to end first.
+- Stops early when a forced mate is proven.
+
+## 3d. Quiescence search (2026-10-20)
+- At depth 0 the search continues with captures and promotions only, with
+  stand-pat (static eval as a lower bound), alpha-beta cutoffs and MVV-LVA
+  ordering (selection sort). Fixes the horizon effect (checked by a
+  poisoned-pawn test).
+- Plain minimax uses the same quiescence without pruning (prune = false) so
+  the alpha-beta equivalence tests stay valid.
+- Simplifications: no check evasions in quiescence, no delta pruning/SEE;
+  captures obtained by filtering pseudo-legal moves (dedicated generator
+  later).
+- Measured: KL_3d vs KL_3c match result (record in measurements.md).
+
 ## Sources
 - Chess Programming Wiki: Bitboards, Square Mapping Considerations.

@@ -11,6 +11,8 @@ add_library(KnightLift_core STATIC
         src/search.cpp
 )
 target_include_directories(KnightLift_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
+find_package(Threads REQUIRED)
+target_link_libraries(KnightLift_core PUBLIC Threads::Threads)
 
 if(MSVC)
     target_compile_options(KnightLift_core PUBLIC /W4)
@@ -24,5 +26,5 @@ endif()
 add_executable(KnightLift src/main.cpp)
 target_link_libraries(KnightLift PRIVATE KnightLift_core)
 if(MINGW)
-    target_link_options(KnightLift PRIVATE -static)
+    target_link_options(KnightLift PRIVATE)
 endif()
