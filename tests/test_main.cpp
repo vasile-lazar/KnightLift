@@ -354,7 +354,7 @@ namespace {
 
         Position pos;
         for (const std::string_view fen: fens) {
-            for (int depth = 1; depth <= 2; ++depth) {
+            for (int depth = 1; depth <= 3; ++depth) {
                 pos.set_from_fen(fen);
                 const SearchResult full = search(pos, depth, false);
                 pos.set_from_fen(fen);
@@ -365,8 +365,8 @@ namespace {
                       "alpha-beta equals minimax: " + what);
                 check(pruned.nodes <= full.nodes, "alpha-beta never searches more: " + what);
 
-                if (depth == 2) {
-                    std::cout << "depth 2 nodes minimax " << full.nodes << ", alpha-beta "
+                if (depth == 3) {
+                    std::cout << "depth 3 nodes minimax " << full.nodes << ", alpha-beta "
                             << pruned.nodes << " (" << static_cast<double>(full.nodes) /
                             static_cast<double>(pruned.nodes)
                             << "x fewer)\n";

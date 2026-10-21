@@ -84,3 +84,6 @@ bestmove a2a3
 4b: 1,241,734,355 nodes in 108 seconds
 4c: 21,843,147 nodes in 1.1 seconds
 4d: 16,985,289 nodes in 0.8 seconds
+4e: 17,364,113 nodes in 0.94 seconds
+
+## bench on depth 8

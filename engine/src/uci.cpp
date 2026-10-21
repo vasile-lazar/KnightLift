@@ -248,7 +248,7 @@ namespace KnightLift {
 
             void handle_bench(std::istringstream& args)
             {
-                int depth = 6;
+                int depth = 8;
                 args >> depth;
                 depth = std::clamp(depth, 1, kMaxDepth);
 

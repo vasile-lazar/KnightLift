@@ -249,6 +249,15 @@ which alternatives existed, and why.
 - Killers live in the Searcher, so they start empty for every search and are never shared between searches. They are not validated: a killer that is not in this position's move list is simply never matched.
 - Yardstick: bench total nodes (depth 7), before and after.
 
+## 4e. History heuristic
+
+- Table history[color][from][to], one int per entry, zeroed at the start of every search (it lives in the Searcher). Persistence across moves with aging is postponed.
+- On a quiet beta cutoff: bonus = min(depth*depth, 1600) for the cutoff move, and the same malus for every quiet move tried earlier in the node.
+- Update with "gravity": h += bonus - h*|bonus|/16384, which keeps every entry bounded in (-16384, 16384) without a separate aging step.
+- Move ordering score ranges: TT move 2,000,000; captures 1,000,000 + MVV-LVA; killer 0 900,000; killer 1 800,000; quiet moves by their history value (can be negative).
+- Constants (cap, max) are first guesses; they will be tuned when Elo matches are available.
+- Yardstick: bench total nodes (depth 7), before and after.
+
 
 
 
