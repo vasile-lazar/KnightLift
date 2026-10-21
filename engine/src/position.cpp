@@ -51,6 +51,7 @@ namespace KnightLift {
         halfmoveClock_ = 0;
         fullmoveNumber_ = 1;
         historyPly_ = 0;
+        key_ = 0;
     }
 
     void Position::put_piece(Piece p, Square s) {
@@ -58,6 +59,7 @@ namespace KnightLift {
         pieceBB_[to_index(p)] |= bb;
         colorBB_[to_index(color_of(p))] |= bb;
         occupied_ |= bb;
+        key_ ^= Zobrist::kKeys.pieceSquare[to_index(p)][to_index(s)];
         board_[to_index(s)] = p;
     }
 
@@ -149,6 +151,7 @@ namespace KnightLift {
         if (pieces(PieceType::Pawn) & (rank_bb(Rank::R1) | rank_bb(Rank::R8))) {
             return fail();
         }
+        key_ = compute_key();
 
         return true;
     }
@@ -239,6 +242,7 @@ namespace KnightLift {
         pieceBB_[to_index(p)] ^= bb;
         colorBB_[to_index(color_of(p))] ^= bb;
         occupied_ ^= bb;
+        key_ ^= Zobrist::kKeys.pieceSquare[to_index(board_[to_index(s)])][to_index(s)];
         board_[to_index(s)] = Piece::None;
     }
 
@@ -249,6 +253,11 @@ namespace KnightLift {
         pieceBB_[to_index(p)] ^= fromTo;
         colorBB_[to_index(color_of(p))] ^= fromTo;
         occupied_ ^= fromTo;
+        {
+            const std::size_t pi = to_index(board_[to_index(from)]);
+            key_ ^= Zobrist::kKeys.pieceSquare[pi][to_index(from)] ^
+                    Zobrist::kKeys.pieceSquare[pi][to_index(to)];
+        }
         board_[to_index(from)] = Piece::None;
         board_[to_index(to)] = p;
     }
@@ -265,6 +274,10 @@ namespace KnightLift {
         st.castling = castling_;
         st.epSquare = epSquare_;
         st.halfmoveClock = halfmoveClock_;
+        st.key = key_;
+
+        key_ ^= ep_key();
+        key_ ^= Zobrist::kKeys.castling[castling_];
 
         ++halfmoveClock_;
         epSquare_ = Square::None;
@@ -299,8 +312,11 @@ namespace KnightLift {
         }
 
         castling_ &= kCastlingMask[to_index(from)] & kCastlingMask[to_index(to)];
+        key_ ^= Zobrist::kKeys.castling[castling_];
         if (us == Color::Black) ++fullmoveNumber_;
         sideToMove_ = ~us;
+        key_ ^= Zobrist::kKeys.side;
+        key_ ^= ep_key();
     }
 
     void Position::unmake_move(Move m) {
@@ -332,10 +348,13 @@ namespace KnightLift {
         castling_ = st.castling;
         epSquare_ = st.epSquare;
         halfmoveClock_ = st.halfmoveClock;
+        key_ = st.key;
     }
 
     bool Position::consistent() const {
         std::array<Bitboard, kNumPieces> bb{};
+        if (key_ != compute_key()) return false;
+
         for (std::size_t i = 0; i < kNumSquares; ++i) {
             const Piece p = board_[i];
             if (p != Piece::None) bb[to_index(p)] |= square_bb(static_cast<Square>(i));
@@ -348,5 +367,23 @@ namespace KnightLift {
         }
         return bb == pieceBB_ && white == colorBB_[0] && black == colorBB_[1] &&
                (white | black) == occupied_;
+    }
+
+    Key Position::ep_key() const {
+        if (epSquare_ == Square::None) return 0;
+        if (!(pawn_attacks(~sideToMove_, epSquare_) & pieces(sideToMove_, PieceType::Pawn))) return 0;
+        return Zobrist::kKeys.epFile[to_index(file_of(epSquare_))];
+    }
+
+    Key Position::compute_key() const {
+        Key k = 0;
+        for (std::size_t s = 0; s < kNumSquares; ++s) {
+            const Piece p = board_[s];
+            if (p != Piece::None) k ^= Zobrist::kKeys.pieceSquare[to_index(p)][s];
+        }
+        k ^= Zobrist::kKeys.castling[castling_];
+        k ^= ep_key();
+        if (sideToMove_ == Color::Black) k ^= Zobrist::kKeys.side;
+        return k;
     }
 } // namespace KnightLift
