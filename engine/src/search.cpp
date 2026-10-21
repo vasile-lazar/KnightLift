@@ -13,6 +13,7 @@
 namespace KnightLift {
     namespace {
         TranspositionTable gTT(16);
+        bool gNullMove = true;
         constexpr int kHistoryMax = 16384;
         using HistoryTable = std::array<std::array<int, kNumSquares>, kNumSquares>;
 
@@ -132,7 +133,7 @@ namespace KnightLift {
             // Plain minimax: reference implementation, never aborted.
             int negamax(int depth, int ply) {
                 ++nodes_;
-                if (depth == 0) return quiescence(-kInfinity, kInfinity, true);
+                if (depth <= 0) return quiescence(-kInfinity, kInfinity, true);
                 MoveList list;
                 generate_pseudo_legal(pos_, list);
 
@@ -154,14 +155,13 @@ namespace KnightLift {
                 return best;
             }
 
-            int alphabeta(int depth, int ply, int alpha, int beta) {
+            int alphabeta(int depth, int ply, int alpha, int beta, bool allowNull = true) {
                 ++nodes_;
                 if (checkStop_ && (nodes_ & 2047) == 0 && should_stop()) aborted_ = true;
                 if (aborted_) return 0;
-                if (depth == 0) return quiescence(alpha, beta, true);
+                if (depth <= 0) return quiescence(alpha, beta, true);
 
                 const int alphaOrig = alpha;
-                const Color us = pos_.side_to_move();
                 Move ttMove = Move::none();
                 if (tt_ != nullptr) {
                     TTEntry e;
@@ -177,6 +177,22 @@ namespace KnightLift {
                         }
                     }
                 }
+
+                const Color us = pos_.side_to_move();
+                const Bitboard nonPawnMaterial =
+                        pos_.pieces(us) & ~(pos_.pieces(us, PieceType::Pawn) |
+                                            pos_.pieces(us, PieceType::King));
+                if (nullMove_ && allowNull && depth >= 3 && nonPawnMaterial != 0 &&
+                    !pos_.in_check() && evaluate(pos_) >= beta) {
+                    const int nullDepth = depth - 1 - (2 + depth / 6);
+                    pos_.make_null_move();
+                    const int nullScore = nullDepth <= 0
+                                              ? -quiescence(-beta, -beta + 1, true)
+                                              : -alphabeta(nullDepth, ply + 1, -beta, -beta + 1, false);
+                    pos_.unmake_null_move();
+                    if (aborted_) return 0;
+                    if (nullScore >= beta) return nullScore > kMateBound ? beta : nullScore;
+                    }
 
                 MoveList list;
                 generate_pseudo_legal(pos_, list);
@@ -287,6 +303,8 @@ namespace KnightLift {
                 return result;
             }
 
+            void enable_null_move(bool on) { nullMove_ = on; }
+
         private:
             bool should_stop() const {
                 if (stop_ != nullptr && stop_->load(std::memory_order_relaxed)) return true;
@@ -314,6 +332,7 @@ namespace KnightLift {
             bool checkStop_ = false;
             std::array<std::array<Move, 2>, kMaxDepth + 2> killers_{};
             std::array<HistoryTable, kNumColors> history_{};
+            bool nullMove_ = false;
         };
     } // namespace
 
@@ -329,6 +348,7 @@ namespace KnightLift {
     SearchResult search_iterative(Position &pos, const SearchLimits &limits,
                                   const std::atomic<bool> &stop, const InfoCallback &onInfo) {
         Searcher searcher(pos, &limits, &stop, &gTT);
+        searcher.enable_null_move(gNullMove);
         SearchResult best;
 
         for (int depth = 1; depth <= limits.maxDepth && depth <= kMaxDepth; ++depth) {
@@ -351,4 +371,6 @@ namespace KnightLift {
         best.nodes = searcher.nodes();
         return best;
     }
+
+    void set_null_move(bool enabled) { gNullMove = enabled; }
 } // namespace KnightLift

@@ -53,4 +53,6 @@ namespace KnightLift
     void tt_resize(std::size_t megabytes);
     void tt_clear();
     int tt_hashfull();
+
+    void set_null_move(bool enabled);
 } // namespace KnightLift

@@ -319,6 +319,32 @@ namespace KnightLift {
         key_ ^= ep_key();
     }
 
+    void Position::make_null_move() {
+        assert(historyPly_ < kMaxGamePly);
+        State &st = history_[historyPly_++];
+        st.captured = Piece::None;
+        st.castling = castling_;
+        st.epSquare = epSquare_;
+        st.halfmoveClock = halfmoveClock_;
+        st.key = key_;
+
+        key_ ^= ep_key();            // remove the old ep contribution (board and side still old)
+        epSquare_ = Square::None;
+        ++halfmoveClock_;
+        sideToMove_ = ~sideToMove_;
+        key_ ^= Zobrist::kKeys.side;
+    }
+
+    void Position::unmake_null_move() {
+        assert(historyPly_ > 0);
+        sideToMove_ = ~sideToMove_;
+        const State &st = history_[--historyPly_];
+        castling_ = st.castling;
+        epSquare_ = st.epSquare;
+        halfmoveClock_ = st.halfmoveClock;
+        key_ = st.key;
+    }
+
     void Position::unmake_move(Move m) {
         assert(historyPly_ > 0);
         sideToMove_ = ~sideToMove_;

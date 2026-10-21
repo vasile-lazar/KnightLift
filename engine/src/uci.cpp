@@ -94,7 +94,8 @@ namespace KnightLift {
                         std::ostringstream text;
                         text << "id name " << kEngineName << ' ' << kVersion << '\n'
                                 << "id author " << kAuthor << '\n'
-                                << "option name Hash type spin default 16 min 1 max 4096\nuciok";
+                                << "option name Hash type spin default 16 min 1 max 4096\n"
+                                << "option name NullMove type check default true\nuciok";
                         send(text.str());
                     } else if (command == "isready") {
                         send("readyok");
@@ -115,7 +116,7 @@ namespace KnightLift {
                     } else if (command == "d") {
                         finish_search(true);
                         send(pos_.to_string());
-                    } else if (command == "bench"){
+                    } else if (command == "bench") {
                         finish_search(true);
                         handle_bench(args);
                     }
@@ -243,11 +244,12 @@ namespace KnightLift {
                         tt_resize(static_cast<std::size_t>(std::clamp(std::stoi(value), 1, 4096)));
                     } catch (...) {
                     } // malformed value: ignore
+                } else if (name == "NullMove") {
+                    set_null_move(value == "true");
                 }
             }
 
-            void handle_bench(std::istringstream& args)
-            {
+            void handle_bench(std::istringstream &args) {
                 int depth = 8;
                 args >> depth;
                 depth = std::clamp(depth, 1, kMaxDepth);
@@ -255,8 +257,7 @@ namespace KnightLift {
                 std::uint64_t totalNodes = 0;
                 const auto start = std::chrono::steady_clock::now();
 
-                for (const std::string_view fen : kBenchFens)
-                {
+                for (const std::string_view fen: kBenchFens) {
                     Position p;
                     if (!p.set_from_fen(fen)) continue;
                     tt_clear();
@@ -273,7 +274,7 @@ namespace KnightLift {
 
                 const auto ms = std::max<std::int64_t>(
                     1, std::chrono::duration_cast<std::chrono::milliseconds>(
-                           std::chrono::steady_clock::now() - start).count());
+                        std::chrono::steady_clock::now() - start).count());
                 send("===========================\nTotal nodes: " + std::to_string(totalNodes) +
                      "\nTime ms: " + std::to_string(ms) +
                      "\nNodes/second: " + std::to_string(totalNodes * 1000 / ms));

@@ -262,6 +262,16 @@ namespace {
         check(a.key() != b.key(), "zobrist: side to move");
         b.set_from_fen("r3k2r/8/8/8/8/8/8/R3K2R w Kkq - 0 1");
         check(a.key() != b.key(), "zobrist: castling rights");
+
+        // Null move: key stays consistent and unmake restores everything.
+        pos.set_from_fen("4k3/8/8/8/3pP3/8/8/4K3 b - e3 0 1"); // black pawn can capture ep
+        const Key beforeNull = pos.key();
+        const std::string fenBeforeNull = pos.to_fen();
+        pos.make_null_move();
+        check(pos.consistent() && pos.key() == pos.compute_key(), "null move: key consistent");
+        pos.unmake_null_move();
+        check(pos.consistent() && pos.key() == beforeNull && pos.to_fen() == fenBeforeNull,
+              "null move: unmake restores position and key");
     }
 
     std::string run_uci(const std::string &script) {

@@ -33,9 +33,9 @@ Every result needs: date, git commit, compiler, flags, build type.
 ## 3d vs 3c engine versions with a opening book
 
 Score of KL_3d vs KL_3c: 9 - 8 - 33  [0.510] 50
-...      KL_3d playing White: 6 - 2 - 17  [0.580] 25
-...      KL_3d playing Black: 3 - 6 - 16  [0.440] 25
-...      White vs Black: 12 - 5 - 33  [0.570] 50
+... KL_3d playing White: 6 - 2 - 17  [0.580] 25
+... KL_3d playing Black: 3 - 6 - 16  [0.440] 25
+... White vs Black: 12 - 5 - 33  [0.570] 50
 Elo difference: 6.9 +/- 56.6, LOS: 59.6 %, DrawRatio: 66.0 %
 SPRT: llr 0 (0.0%), lbound -inf, ubound inf
 
@@ -54,6 +54,7 @@ Player: KL_3c
 Finished match
 
 ## 4a vs 4b engines
+
 4a:
 position startpos
 go depth 8
@@ -81,9 +82,17 @@ info depth 8 score cp 0 nodes 1052459 hashfull 35 time 63 nps 16705698 pv a2a3
 bestmove a2a3
 
 ## 4b vs 4c vs 4d bench on depth 7
+
 4b: 1,241,734,355 nodes in 108 seconds
 4c: 21,843,147 nodes in 1.1 seconds
 4d: 16,985,289 nodes in 0.8 seconds
 4e: 17,364,113 nodes in 0.94 seconds
+
+## 2×2 table (bench 7, Release, total nodes)
+
+| 	            | history off         | 	history on          |
+|--------------|---------------------|----------------------|
+| NullMove off | 16,985,289 (806 ms) | 	17,364,113 (930 ms) |
+| NullMove on	 | 2,795,472 (192 ms)  | 2,894,330 (205 ms)   |                 
 
 ## bench on depth 8

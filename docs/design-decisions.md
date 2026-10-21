@@ -258,7 +258,14 @@ which alternatives existed, and why.
 - Constants (cap, max) are first guesses; they will be tuned when Elo matches are available.
 - Yardstick: bench total nodes (depth 7), before and after.
 
+## 4f. Null-move pruning
 
+- In alphabeta, before generating moves: if depth >= 3, no null move was just made, the side to move is not in check, it has at least one non-pawn non-king piece (zugzwang guard) and the static eval >= beta, make a null move and search with depth - 1 - R and the zero window (-beta, -beta+1). If the result >= beta, return it (a mate score from the null search is not trusted and beta is returned instead).
+- R = 2 + depth/6 (R = 2 for depth 3-5, R = 3 for depth 6-11, ...). If depth - 1 - R <= 0 the null search is a quiescence search.
+- No two null moves in a row (allowNull flag passed down the recursion).
+- Applies only to search_iterative, never to the fixed-depth reference search(), so the minimax equivalence tests stay valid.
+- UCI check option NullMove (default true) lets later Elo matches measure on vs off. Without Elo matches the bench can only show the speed side, so the accuracy side is checked by comparing per-position scores with the option on and off.
+- Postponed: verification search at high depth, storing the null-move cutoff in the TT, tuning R.
 
 
 ## Sources
