@@ -285,5 +285,14 @@ which alternatives existed, and why.
 - Hand-picked starting points (doubled -10/-20, isolated -10/-15, passed bonus growing with rank), explicitly placeholders for the 5e tuning.
 - Elo vs 5a (cutechess-cli, 8moves_v3, tc 8+0.08, SPRT elo0=0 elo1=10, -games 2 -repeat). Bench nodes recorded for reference only. If the SPRT is inconclusive, record the result and keep the term set, since the 5e tuner will decide the values.
 
+## 5c: Mobility
+- For knights, bishops, rooks and queens, count the squares the piece attacks inside a mobility area, and add (count - base) * weight to the mg and eg sums (separate weights per piece type), tapered as before.
+- All squares except those occupied by own pieces and those attacked by enemy pawns. Own pieces are excluded so a piece does not get credit for "moving" onto its own pieces; enemy-pawn attacks are excluded because such moves lose the piece for a pawn. Sliders use the full occupancy (no x-rays through pieces).
+- Bonus is linear in the count with a per-piece baseline (the typical count, so an average piece scores about 0). Real mobility curves are concave; a table per piece type is the 5e tuning target.
+- Counting pseudo-legal moves (needs move generation inside eval, slow; attack bitboards are the standard cheaper proxy); pins/king-safety-aware mobility (belongs to 5d); concave tables now (the number of free parameters is premature before the tuner exists).
+- Baseline/mg/eg: N 4/4/4, B 6/5/5, R 6/2/4, Q 13/1/2. Placeholders for 5e.
+- Elo vs 5b (cutechess-cli, 8moves_v3, tc 8+0.08, SPRT elo0=0 elo1=10). Bench nodes for reference; also note bench nps, because mobility makes eval noticeably slower.
+
+
 ## Sources
 - Chess Programming Wiki: Bitboards, Square Mapping Considerations.
