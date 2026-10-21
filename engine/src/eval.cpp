@@ -1,9 +1,10 @@
-#include "eval.hpp"
-
 #include <algorithm>
 #include <array>
 #include <bit>
 #include <cstddef>
+
+#include "eval.hpp"
+#include "attacks.hpp"
 
 namespace KnightLift {
     namespace {
@@ -229,6 +230,53 @@ namespace KnightLift {
                 }
             }
         }
+
+                // ---- Mobility (5c) ------------------------------------------------------
+
+        struct MobilityParams {
+            int base;
+            int mg;
+            int eg;
+        };
+
+        // Indexed by PieceType; pawn and king unused.
+        constexpr std::array<MobilityParams, kNumPieceTypes> kMobility = {{
+            {0, 0, 0},    // Pawn
+            {4, 4, 4},    // Knight
+            {6, 5, 5},    // Bishop
+            {6, 2, 4},    // Rook
+            {13, 1, 2},   // Queen
+            {0, 0, 0},    // King
+        }};
+
+        constexpr Bitboard pawn_attacks_bb(Color c, Bitboard pawns) {
+            if (c == Color::White) {
+                return ((pawns & ~file_bb(File::A)) << 7) | ((pawns & ~file_bb(File::H)) << 9);
+            }
+            return ((pawns & ~file_bb(File::A)) >> 9) | ((pawns & ~file_bb(File::H)) >> 7);
+        }
+
+        static_assert(pawn_attacks_bb(Color::White, square_bb(Square::E4)) ==
+                      (square_bb(Square::D5) | square_bb(Square::F5)));
+        static_assert(pawn_attacks_bb(Color::White, square_bb(Square::A2)) == square_bb(Square::B3));
+        static_assert(pawn_attacks_bb(Color::Black, square_bb(Square::H7)) == square_bb(Square::G6));
+        static_assert(pawn_attacks_bb(Color::Black, square_bb(Square::A7)) == square_bb(Square::B6));
+
+        void mobility(const Position& pos, Color c, int& mg, int& eg) {
+            const Bitboard occ = pos.occupied();
+            const Bitboard area = ~(pos.pieces(c) | pawn_attacks_bb(~c, pos.pieces(~c, PieceType::Pawn)));
+
+            for (std::size_t t = to_index(PieceType::Knight); t <= to_index(PieceType::Queen); ++t) {
+                const PieceType pt = static_cast<PieceType>(t);
+                Bitboard bb = pos.pieces(c, pt);
+                while (bb) {
+                    const Square s = pop_lsb(bb);
+                    const int n = popcount(piece_attacks(pt, s, occ) & area);
+                    mg += kMobility[t].mg * (n - kMobility[t].base);
+                    eg += kMobility[t].eg * (n - kMobility[t].base);
+                }
+            }
+        }
     } // namespace
 
     int evaluate(const Position &pos) {
@@ -250,6 +298,7 @@ namespace KnightLift {
                 }
             }
             pawn_structure(pos, color, mg[c], eg[c]);
+            mobility(pos, color, mg[c], eg[c]);
         }
 
         phase = std::min(phase, kMaxPhase);

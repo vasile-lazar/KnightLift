@@ -480,6 +480,11 @@ namespace {
         a.set_from_fen("4k3/3p4/4P3/8/8/8/8/4K3 w - - 0 1");
         b.set_from_fen("4k3/p7/4P3/8/8/8/8/4K3 w - - 0 1");
         check(evaluate(b) > evaluate(a) + 50, "eval: passed pawn bonus");
+
+        // Mobility: boxed-in bishop scores clearly lower than a free one.
+        a.set_from_fen("4k3/8/8/8/8/8/1P1P4/2B1K3 w - - 0 1");
+        b.set_from_fen("4k3/8/8/8/8/8/P5P1/2B1K3 w - - 0 1");
+        check(evaluate(b) > evaluate(a) + 25, "eval: bishop mobility");
     }
 
     void test_tt() {
