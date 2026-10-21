@@ -267,6 +267,16 @@ which alternatives existed, and why.
 - UCI check option NullMove (default true) lets later Elo matches measure on vs off. Without Elo matches the bench can only show the speed side, so the accuracy side is checked by comparing per-position scores with the option on and off.
 - Postponed: verification search at high depth, storing the null-move cutoff in the TT, tuning R.
 
+## 5a: Tapered piece-square evaluation
+
+- The eval is the sum, per piece, of (material + PST) in two variants: middlegame (mg) and endgame (eg). The two sums are interpolated by a game phase derived from the remaining non-pawn material.
+- Weights N=1, B=1, R=2, Q=4, total 24 (full starting material). phase = min(sum, 24). Score = (mg*phase + eg*(24-phase)) / 24. Promotions can exceed 24, hence the clamp.
+- Initial values are PeSTO (Ronald Friederich), including its mg/eg material values, because those tables are calibrated against them (mixing with 100/320/330/500/900 would double-count). They are only a starting point: 5e replaces them with tuned values.
+- Tables are written from White's view, rank 8 first (readable in source). With LERF (a1=0), White indexes `sq ^ 56`, Black indexes `sq` (vertical mirror), so one table serves both colors.
+- King wants safety in the middlegame and centralization in the endgame; pawns gain value as they advance in the endgame. A single table cannot express that, and a hard phase switch causes eval discontinuities that destabilize the search.
+- Hard mg/eg switch (discontinuous); computing PSTs incrementally in make_move (premature, revisit with NNUE accumulator work); a single table (above).
+- Bench nodes change by design (eval affects pruning), so the metric is Elo vs 4f (cutechess-cli, 8moves_v3, tc 8+0.08, SPRT). Bench depth 6 recorded for reference only.
+
 
 ## Sources
 - Chess Programming Wiki: Bitboards, Square Mapping Considerations.

@@ -87,8 +87,8 @@ bestmove a2a3
 4c: 21,843,147 nodes in 1.1 seconds
 4d: 16,985,289 nodes in 0.8 seconds
 4e: 17,364,113 nodes in 0.94 seconds
-
-## 2×2 table (bench 7, Release, total nodes)
+4f: 2,894,330 nodes in 0.2 seconds
+5a: 6,178,242 nodes in 0.5 seconds
 
 | 	            | history off         | 	history on          |
 |--------------|---------------------|----------------------|

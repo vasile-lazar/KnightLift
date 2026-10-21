@@ -6,7 +6,11 @@
 #include <string_view>
 #include <sstream>
 #include <atomic>
+#include <algorithm>
+#include <cctype>
+#include <vector>
 
+#include "../engine/src/eval.hpp"
 #include "tt.hpp"
 #include "../engine/src/attacks.hpp"
 #include "../engine/src/movegen.hpp"
@@ -385,6 +389,82 @@ namespace {
         }
     }
 
+    // ---- Eval -------------------------------------------------------------------
+
+    std::string mirror_fen(const std::string &fen) {
+        std::vector<std::string> f;
+        std::istringstream in(fen);
+        for (std::string t; in >> t;) f.push_back(t);
+
+        // Board: reverse rank order, swap piece colours.
+        std::vector<std::string> ranks;
+        std::istringstream bs(f[0]);
+        for (std::string r; std::getline(bs, r, '/');) ranks.push_back(r);
+        std::reverse(ranks.begin(), ranks.end());
+        std::string board;
+        for (std::size_t i = 0; i < ranks.size(); ++i) {
+            if (i) board += '/';
+            for (const char ch: ranks[i]) {
+                if (std::isupper(static_cast<unsigned char>(ch))) board += static_cast<char>(std::tolower(ch));
+                else if (std::islower(static_cast<unsigned char>(ch))) board += static_cast<char>(std::toupper(ch));
+                else board += ch;
+            }
+        }
+
+        const std::string side = f[1] == "w" ? "b" : "w";
+
+        // Castling: swap case, keep canonical KQkq order.
+        std::string castling;
+        for (const char ch: std::string("KQkq")) {
+            const char orig = std::isupper(static_cast<unsigned char>(ch)) ? static_cast<char>(std::tolower(ch))
+                                                                           : static_cast<char>(std::toupper(ch));
+            if (f[2].find(orig) != std::string::npos) castling += ch;
+        }
+        if (castling.empty()) castling = "-";
+
+        // En passant: flip the rank (3 <-> 6).
+        std::string ep = f[3];
+        if (ep != "-") ep[1] = ep[1] == '3' ? '6' : '3';
+
+        return board + " " + side + " " + castling + " " + ep + " " + f[4] + " " + f[5];
+    }
+
+    void test_eval() {
+        Position a, b;
+
+        // Start position is balanced.
+        a.set_from_fen(kStartFen);
+        check(evaluate(a) == 0, "eval: startpos == 0");
+
+        // Colour symmetry over every perft position: a mirrored position must score the same
+        // from the side to move's point of view. Catches a wrong `sq ^ 56` or a sign error.
+        for (const PerftCase &c: kPerftCases) {
+            const std::string mirrored = mirror_fen(std::string(c.fen));
+            const bool ok = a.set_from_fen(c.fen) && b.set_from_fen(mirrored);
+            check(ok, "eval: mirrored FEN parses: " + mirrored);
+            check(ok && evaluate(a) == evaluate(b), "eval: colour symmetry: " + std::string(c.name));
+        }
+
+        // Same board, other side to move: score flips sign (eval is side-to-move POV).
+        const std::string board = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R";
+        a.set_from_fen(board + " w KQkq - 0 1");
+        b.set_from_fen(board + " b KQkq - 0 1");
+        check(evaluate(a) == -evaluate(b), "eval: side-to-move sign");
+
+        // Material sanity: an extra queen is worth clearly more than a minor piece.
+        a.set_from_fen("4k3/8/8/8/8/8/8/3QK3 w - - 0 1");
+        check(evaluate(a) > 800, "eval: extra queen");
+
+        // Tapering: in a pawn endgame an advanced passed pawn must score higher than a home one.
+        a.set_from_fen("4k3/8/8/8/8/8/P7/4K3 w - - 0 1");
+        b.set_from_fen("4k3/P7/8/8/8/8/8/4K3 w - - 0 1");
+        check(evaluate(b) > evaluate(a), "eval: endgame pawn advancement");
+
+        // Phase clamp: far more than 24 phase points (promotions) must not break anything.
+        a.set_from_fen("QQQQkQQQ/QQQQQQQQ/8/8/8/8/8/4K3 w - - 0 1");
+        check(std::abs(evaluate(a)) < 30000, "eval: phase clamp, no overflow");
+    }
+
     void test_tt() {
         TranspositionTable tt(1);
         TTEntry e;
@@ -427,6 +507,7 @@ int main() {
     test_make_unmake();
     test_perft();
     test_zobrist();
+    test_eval();
     test_uci();
     test_search();
     test_alphabeta();
