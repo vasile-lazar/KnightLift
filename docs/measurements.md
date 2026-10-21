@@ -20,6 +20,7 @@ Every result needs: date, git commit, compiler, flags, build type.
 |------------|------------------------------------------|---------------------------------------------------------------------|--------------|---------------------------------|
 | 2026-10-19 | b97b38d04e84ff2447994662a7a7b94012cab922 | init_attacks (PEXT tables, 107k entries)                            | 5.642 ms     | GCC, -O3 -march=native, Release |
 | 2026-10-20 | 8e97ee96f95eca90b412ddd725b07cf063f64546 | perft startpos depth 5, baseline (pseudo-legal + make/check/unmake) | 61.6802 Mnps | GCC, -O3 -march=native, Release |
+| 2026-10-21 | c5beddb44abba9186452c98302c4de1d8c4e304b | perft startpos depth 5, baseline                                    | 55.8067 Mnps | GCC, -O3 -march=native, Release |
 
 | Depth | Minimax nodes | Alpha-beta nodes | Time (both) |
 |-------|---------------|------------------|-------------|
