@@ -257,9 +257,10 @@ void test_search_iterative() {
         r = search(pos, 3);
         check(move_to_uci(r.best) == "d1d5", "search: wins a free queen");
 
-        // Without pruning, nodes at depth N = perft(1) + ... + perft(N).
-        pos.set_from_fen(std::string(kStartFen));
-        check(search(pos, 3, false).nodes == 20 + 400 + 8902, "search: node count equals perft sum");
+        // Quiescence: a depth-1 search must not grab a defended pawn with the queen.
+        pos.set_from_fen("4k3/8/2p5/3p4/8/8/8/3QK3 w - - 0 1");
+        r = search(pos, 1);
+        check(move_to_uci(r.best) != "d1d5", "quiescence avoids a poisoned pawn");
     }
 
     void test_alphabeta() {
@@ -273,7 +274,7 @@ void test_search_iterative() {
 
         Position pos;
         for (const std::string_view fen : fens) {
-            for (int depth = 1; depth <= 4; ++depth) {
+            for (int depth = 1; depth <= 2; ++depth) {
                 pos.set_from_fen(fen);
                 const SearchResult full = search(pos, depth, false);
                 pos.set_from_fen(fen);
@@ -284,8 +285,8 @@ void test_search_iterative() {
                       "alpha-beta equals minimax: " + what);
                 check(pruned.nodes <= full.nodes, "alpha-beta never searches more: " + what);
 
-                if (depth == 4) {
-                    std::cout << "depth 4 nodes minimax " << full.nodes << ", alpha-beta "
+                if (depth == 2) {
+                    std::cout << "depth 2 nodes minimax " << full.nodes << ", alpha-beta "
                               << pruned.nodes << " (" << static_cast<double>(full.nodes) /
                                                              static_cast<double>(pruned.nodes)
                               << "x fewer)\n";

@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <string>
 #include <string_view>
+#include <utility>
 
 #include "types.hpp"
 
@@ -118,6 +119,7 @@ public:
             }
         }
     }
+    void swap(std::size_t i, std::size_t j) { std::swap(moves_[i], moves_[j]); }
 private:
     std::array<Move, kMaxMoves> moves_;
     std::size_t size_ = 0;
