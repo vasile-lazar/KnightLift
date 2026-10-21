@@ -2,6 +2,7 @@
 
 #include <chrono>
 #include <utility>
+#include <array>
 
 #include "eval.hpp"
 #include "movegen.hpp"
@@ -34,9 +35,11 @@ namespace KnightLift {
             return 10 * (victim + 1) - (attacker + 1);
         }
 
-        int score_move(const Position &pos, Move m, Move first) {
+        int score_move(const Position &pos, Move m, Move first, Move killer0, Move killer1) {
             if (m == first) return 1'000'000;
             if (m.is_capture() || m.is_promotion()) return 100 + mvv_lva(pos, m);
+            if (m == killer0) return 90;
+            if (m == killer1) return 80;
             return 0;
         }
 
@@ -174,7 +177,7 @@ namespace KnightLift {
 
                 int scores[kMaxMoves];
                 for (std::size_t i = 0; i < list.size(); ++i) {
-                    scores[i] = score_move(pos_, list[i], ttMove);
+                    scores[i] = score_move(pos_, list[i], ttMove, killers_[ply][0], killers_[ply][1]);
                 }
 
                 int best = -kInfinity;
@@ -198,7 +201,10 @@ namespace KnightLift {
                         bestMove = m;
                         if (score > alpha) alpha = score;
                     }
-                    if (alpha >= beta) break;
+                    if (alpha >= beta) {
+                        if (!m.is_capture() && !m.is_promotion()) store_killer(ply, m);
+                        break;
+                    }
                 }
 
                 if (!hasLegalMove) return pos_.in_check() ? -kMateScore + ply : 0;
@@ -228,7 +234,7 @@ namespace KnightLift {
 
                 int scores[kMaxMoves];
                 for (std::size_t i = 0; i < list.size(); ++i) {
-                    scores[i] = score_move(pos_, list[i], first);
+                    scores[i] = score_move(pos_, list[i], first, Move::none(), Move::none());
                 }
 
                 SearchResult result;
@@ -269,6 +275,12 @@ namespace KnightLift {
                 return limits_ != nullptr && limits_->hardMs >= 0 && elapsed_ms() >= limits_->hardMs;
             }
 
+            void store_killer(int ply, Move m) {
+                if (killers_[ply][0] == m) return;
+                killers_[ply][1] = killers_[ply][0];
+                killers_[ply][0] = m;
+            }
+
             Position &pos_;
             const SearchLimits *limits_;
             const std::atomic<bool> *stop_;
@@ -277,6 +289,7 @@ namespace KnightLift {
             std::uint64_t nodes_ = 0;
             bool aborted_ = false;
             bool checkStop_ = false;
+            std::array<std::array<Move, 2>, kMaxDepth + 2> killers_{};
         };
     } // namespace
 
