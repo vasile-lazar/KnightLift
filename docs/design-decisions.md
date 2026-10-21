@@ -198,5 +198,17 @@ which alternatives existed, and why.
   touching the position wait for the search to end first.
 - Stops early when a forced mate is proven.
 
+## 3d. Quiescence search (2026-10-20)
+- At depth 0 the search continues with captures and promotions only, with
+  stand-pat (static eval as a lower bound), alpha-beta cutoffs and MVV-LVA
+  ordering (selection sort). Fixes the horizon effect (checked by a
+  poisoned-pawn test).
+- Plain minimax uses the same quiescence without pruning (prune = false) so
+  the alpha-beta equivalence tests stay valid.
+- Simplifications: no check evasions in quiescence, no delta pruning/SEE;
+  captures obtained by filtering pseudo-legal moves (dedicated generator
+  later).
+- Measured: KL_3d vs KL_3c match result (record in measurements.md).
+
 ## Sources
 - Chess Programming Wiki: Bitboards, Square Mapping Considerations.
