@@ -9,6 +9,7 @@ add_library(KnightLift_core STATIC
         src/uci.cpp
         src/eval.cpp
         src/search.cpp
+        src/tt.cpp
 )
 target_include_directories(KnightLift_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 find_package(Threads REQUIRED)

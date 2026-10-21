@@ -7,6 +7,7 @@
 #include <sstream>
 #include <atomic>
 
+#include "tt.hpp"
 #include "../engine/src/attacks.hpp"
 #include "../engine/src/movegen.hpp"
 #include "../engine/src/perft.hpp"
@@ -365,6 +366,37 @@ void test_search_iterative() {
             }
         }
     }
+    void test_tt() {
+        TranspositionTable tt(1);
+        TTEntry e;
+        const Key k = 0x123456789ABCDEF0ULL;
+
+        check(!tt.probe(k, e), "tt: empty table misses");
+
+        tt.store(k, Move::none(), 42, 5, Bound::Exact);
+        check(tt.probe(k, e) && e.score == 42 && e.depth == 5 && e.bound() == Bound::Exact,
+              "tt: store/probe round trip");
+
+        // Same slot (same high bits), different low bits: must not be reported as a hit.
+        check(!tt.probe(k ^ 1ULL, e), "tt: verification key rejects a different position");
+
+        // A store without a move keeps the previously stored move.
+        Position pos;
+        pos.set_from_fen(kStartFen);
+        MoveList list;
+        generate_legal(pos, list);
+        Move first = Move::none();
+        for (const Move m: list) {
+            first = m;
+            break;
+        }
+        tt.store(k, first, 10, 6, Bound::Lower);
+        tt.store(k, Move::none(), 11, 7, Bound::Upper);
+        check(tt.probe(k, e) && e.move == first, "tt: move kept when stored without a move");
+
+        tt.clear();
+        check(!tt.probe(k, e), "tt: clear empties the table");
+    }
 } // namespace
 
 int main() {
@@ -380,6 +412,7 @@ int main() {
     test_search();
     test_alphabeta();
     test_search_iterative();
+    test_tt();
 
     std::cout << (gFailures == 0 ? "ALL TESTS PASSED" : "TESTS FAILED") << '\n';
     return gFailures == 0 ? 0 : 1;
