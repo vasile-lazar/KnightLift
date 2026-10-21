@@ -229,5 +229,12 @@ which alternatives existed, and why.
 - Quiescence does not use the table (postponed). Interaction with repetition detection (path dependence) will be revisited when draw detection is added.
 - UCI: option Hash (MB, default 16, min 1, max 4096); ucinewgame clears the table; one generation per search.
 
+## 4b-2. bench command
+
+- `bench [depth]` (default 7) searches a fixed list of 10 positions with iterative deepening to the given depth, clearing the TT before each one, and prints per-position nodes plus total nodes, time and nps.
+- Search is single-threaded and depth-limited, so total nodes is deterministic: it is the signature of a search version and the main yardstick for steps whose Elo gain is too small to measure while the eval is material-only.
+- Elo/SPRT matches are postponed until the hand-crafted eval (stage 5) gives games enough signal.
+
+
 ## Sources
 - Chess Programming Wiki: Bitboards, Square Mapping Considerations.
