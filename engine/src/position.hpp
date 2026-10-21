@@ -54,6 +54,8 @@ namespace KnightLift {
         bool in_check() const { return is_attacked(king_square(sideToMove_), ~sideToMove_); }
         Piece piece_on(Square s) const { return board_[to_index(s)]; }
         void make_move(Move m);
+        void make_null_move();
+        void unmake_null_move();
         void unmake_move(Move m);
         bool consistent() const;  // debug: bitboards agree with the mailbox
         Key key() const { return key_; }
