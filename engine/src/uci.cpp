@@ -8,6 +8,7 @@
 #include <sstream>
 #include <string>
 #include <thread>
+#include <chrono>
 
 #include "movegen.hpp"
 #include "perft.hpp"
@@ -17,6 +18,19 @@
 
 namespace KnightLift {
     namespace {
+        constexpr std::string_view kBenchFens[] = {
+            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+            "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
+            "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1",
+            "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1",
+            "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8",
+            "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10",
+            "r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3",
+            "rnbqkb1r/pp2pppp/3p1n2/8/3NP3/8/PPP2PPP/RNBQKB1R w KQkq - 0 5",
+            "8/8/4k3/8/8/4K3/4P3/8 w - - 0 1",
+            "r2q1rk1/ppp2ppp/2np1n2/2b1p1B1/2B1P1b1/2NP1N2/PPP2PPP/R2Q1RK1 w - - 0 8",
+        };
+
         struct GoParams {
             int depth = -1;
             std::int64_t movetime = -1;
@@ -101,6 +115,9 @@ namespace KnightLift {
                     } else if (command == "d") {
                         finish_search(true);
                         send(pos_.to_string());
+                    } else if (command == "bench"){
+                        finish_search(true);
+                        handle_bench(args);
                     }
                     // Anything else (setoption, debug, unknown) is ignored for now.
                 }
@@ -227,6 +244,39 @@ namespace KnightLift {
                     } catch (...) {
                     } // malformed value: ignore
                 }
+            }
+
+            void handle_bench(std::istringstream& args)
+            {
+                int depth = 7;
+                args >> depth;
+                depth = std::clamp(depth, 1, kMaxDepth);
+
+                std::uint64_t totalNodes = 0;
+                const auto start = std::chrono::steady_clock::now();
+
+                for (const std::string_view fen : kBenchFens)
+                {
+                    Position p;
+                    if (!p.set_from_fen(fen)) continue;
+                    tt_clear();
+
+                    SearchLimits limits;
+                    limits.maxDepth = depth;
+                    std::atomic<bool> stop{false};
+                    const SearchResult r = search_iterative(p, limits, stop, nullptr);
+                    totalNodes += r.nodes;
+                    send(std::string(fen) + "\n  nodes " + std::to_string(r.nodes) + " bestmove " +
+                         move_to_uci(r.best) + " score " + score_string(r.score));
+                }
+                tt_clear();
+
+                const auto ms = std::max<std::int64_t>(
+                    1, std::chrono::duration_cast<std::chrono::milliseconds>(
+                           std::chrono::steady_clock::now() - start).count());
+                send("===========================\nTotal nodes: " + std::to_string(totalNodes) +
+                     "\nTime ms: " + std::to_string(ms) +
+                     "\nNodes/second: " + std::to_string(totalNodes * 1000 / ms));
             }
 
             std::istream &in_;

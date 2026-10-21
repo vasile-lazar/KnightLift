@@ -297,6 +297,9 @@ namespace {
             "uci\nsetoption name Hash value 16\nucinewgame\nposition startpos\ngo depth 4\n");
         check(has(hash, "option name Hash") && has(hash, "bestmove ") && has(hash, "hashfull"),
               "uci Hash option, ucinewgame, hashfull");
+
+        const std::string bench = run_uci("bench 3\n");
+        check(has(bench, "Total nodes:") && has(bench, "Nodes/second:"), "uci bench");
     }
 
     void test_search_iterative() {
