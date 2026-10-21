@@ -242,6 +242,13 @@ which alternatives existed, and why.
 - The TT move is scored like any other move instead of being moved to the front. A move that is not in the list (a 32-bit key collision) is simply never selected, so no special handling is needed.
 - Yardstick: bench total nodes at depth 6, before and after. Bad-capture detection (SEE) is postponed.
 
+## 4d. Killer moves
+
+- Two killer slots per ply, filled by quiet moves (no capture, no promotion) that cause a beta cutoff in the main search. The new killer goes in slot 0 and the old slot 0 is shifted to slot 1; a killer already in slot 0 is not duplicated.
+- Order: TT move, captures/promotions (MVV-LVA), killer 0, killer 1, other quiet moves. Without SEE, bad captures still rank above killers (postponed).
+- Killers live in the Searcher, so they start empty for every search and are never shared between searches. They are not validated: a killer that is not in this position's move list is simply never matched.
+- Yardstick: bench total nodes (depth 7), before and after.
+
 
 
 
