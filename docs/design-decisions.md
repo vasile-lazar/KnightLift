@@ -277,6 +277,13 @@ which alternatives existed, and why.
 - Hard mg/eg switch (discontinuous); computing PSTs incrementally in make_move (premature, revisit with NNUE accumulator work); a single table (above).
 - Bench nodes change by design (eval affects pruning), so the metric is Elo vs 4f (cutechess-cli, 8moves_v3, tc 8+0.08, SPRT). Bench depth 6 recorded for reference only.
 
+## 5b: Pawn structure
+- Three terms per side, each with a mg and an eg value, added to the tapered sums from 5a: doubled pawns (penalty per pawn beyond the first on a file), isolated pawns (no friendly pawn on adjacent files), passed pawns (no enemy pawn ahead on the same or adjacent files), the latter with a bonus indexed by relative rank.
+- Bitboard-only: file masks, adjacent-file masks, and per-colour "front span" masks (squares ahead on the pawn's file and adjacent files). Masks are constexpr tables built at compile time. No pawn hash table yet.
+- Pawn structure is the cheapest strong positional signal after PSTs, and the passed-pawn bonus is the main endgame driver that the PST pawn table only approximates.
+- Pawn hash table now (premature; measure eval cost first, revisit in 5e or stage 6); backward pawns, connected/phalanx pawns, blocked passers (postponed to a later 5b+ step so each term can be measured separately).
+- Hand-picked starting points (doubled -10/-20, isolated -10/-15, passed bonus growing with rank), explicitly placeholders for the 5e tuning.
+- Elo vs 5a (cutechess-cli, 8moves_v3, tc 8+0.08, SPRT elo0=0 elo1=10, -games 2 -repeat). Bench nodes recorded for reference only. If the SPRT is inconclusive, record the result and keep the term set, since the 5e tuner will decide the values.
 
 ## Sources
 - Chess Programming Wiki: Bitboards, Square Mapping Considerations.
