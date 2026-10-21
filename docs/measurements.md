@@ -90,6 +90,7 @@ bestmove a2a3
 4f: 2,894,330 nodes in 0.2 seconds
 5a: 6,178,242 nodes in 0.5 seconds
 5b: 5,630,863 nodes in 0.5 seconds
+5c: 6,106,503 nodes in 0.6 seconds
 
 | 	            | history off         | 	history on          |
 |--------------|---------------------|----------------------|
@@ -100,3 +101,9 @@ bestmove a2a3
 - Builds: 4f bench7 = 2,894,330 nodes; 5a bench7 = 6,178,242 nodes (Release, GCC).
 - Result: 13-0-2 in 15 finished games (5 unfinished games discarded at SPRT stop). SPRT elo0=0 elo1=50 alpha=beta=0.05: H1 accepted (LLR 3.17).
 - Elo point estimate +458 (error bar undefined, too few games). No illegal moves, no time losses.
+
+### 5c vs 5b (cutechess-cli, tc 8+0.08, Hash 16, 8moves_v3, -repeat, concurrency 6)
+- Builds: 5b bench7 = 5,630,863 nodes; 5c bench7 = 6,106,503 nodes (Release, GCC).
+- Result (from 5b's side): 88-114-299 in 501 games, Elo -18.0 +/- 19.3 -> 5c about +18 +/- 19 Elo, LOS 96.6% for 5c. Draw ratio 59.7% (289 by 3-fold repetition).
+- SPRT (elo0=0, elo1=10) was oriented to 5b, so it is not a valid test of 5c; match stopped manually at 501 games, 6 unfinished games discarded. Conclusion: probable small gain from mobility with placeholder values; 5e tuning expected to improve it.
+- Intermediate snapshots for reference: 40 games 10-8-22 (5b ahead), 200 games 31-56-113 (5c ahead); early snapshots are noise.
