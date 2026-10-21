@@ -5,9 +5,25 @@
 
 #include "eval.hpp"
 #include "movegen.hpp"
+#include "tt.hpp"
 
 namespace KnightLift {
     namespace {
+        TranspositionTable gTT(16);
+
+        // Mate scores are stored relative to the node, not to the root.
+        int score_to_tt(int score, int ply) {
+            if (score > kMateBound) return score + ply;
+            if (score < -kMateBound) return score - ply;
+            return score;
+        }
+
+        int score_from_tt(int score, int ply) {
+            if (score > kMateBound) return score - ply;
+            if (score < -kMateBound) return score + ply;
+            return score;
+        }
+
         // Most Valuable Victim / Least Valuable Attacker: higher scores are searched first.
         int mvv_lva(const Position &pos, Move m) {
             if (m.is_promotion()) return 60; // above every capture score (max is 49)
@@ -20,8 +36,10 @@ namespace KnightLift {
 
         class Searcher {
         public:
-            Searcher(Position &pos, const SearchLimits *limits, const std::atomic<bool> *stop)
-                : pos_(pos), limits_(limits), stop_(stop), start_(std::chrono::steady_clock::now()) {
+            Searcher(Position &pos, const SearchLimits *limits, const std::atomic<bool> *stop,
+                     TranspositionTable *tt = nullptr)
+                : pos_(pos), limits_(limits), stop_(stop), tt_(tt),
+                  start_(std::chrono::steady_clock::now()) {
             }
 
             bool aborted() const { return aborted_; }
@@ -47,7 +65,7 @@ namespace KnightLift {
                 MoveList all;
                 generate_pseudo_legal(pos_, all);
                 MoveList captures;
-                for (const Move m : all) {
+                for (const Move m: all) {
                     if (m.is_capture() || m.is_promotion()) captures.push(m);
                 }
 
@@ -72,8 +90,9 @@ namespace KnightLift {
                         pos_.unmake_move(m);
                         continue;
                     }
-                    const int score = prune ? -quiescence(-beta, -alpha, true)
-                                            : -quiescence(-kInfinity, kInfinity, false);
+                    const int score = prune
+                                          ? -quiescence(-beta, -alpha, true)
+                                          : -quiescence(-kInfinity, kInfinity, false);
                     pos_.unmake_move(m);
                     if (aborted_) return 0;
 
@@ -111,16 +130,35 @@ namespace KnightLift {
                 return best;
             }
 
-            int alphabeta(int depth, int ply, int alpha, int beta) {
+                        int alphabeta(int depth, int ply, int alpha, int beta) {
                 ++nodes_;
                 if (checkStop_ && (nodes_ & 2047) == 0 && should_stop()) aborted_ = true;
                 if (aborted_) return 0;
                 if (depth == 0) return quiescence(alpha, beta, true);
 
+                const int alphaOrig = alpha;
+                Move ttMove = Move::none();
+                if (tt_ != nullptr) {
+                    TTEntry e;
+                    if (tt_->probe(pos_.key(), e)) {
+                        ttMove = e.move;
+                        if (e.depth >= depth) {
+                            const int s = score_from_tt(e.score, ply);
+                            if (e.bound() == Bound::Exact ||
+                                (e.bound() == Bound::Lower && s >= beta) ||
+                                (e.bound() == Bound::Upper && s <= alpha)) {
+                                return s;
+                            }
+                        }
+                    }
+                }
+
                 MoveList list;
                 generate_pseudo_legal(pos_, list);
+                if (!ttMove.is_none()) list.move_to_front(ttMove);
 
                 int best = -kInfinity;
+                Move bestMove = Move::none();
                 bool hasLegalMove = false;
                 for (const Move m: list) {
                     pos_.make_move(m);
@@ -135,12 +173,22 @@ namespace KnightLift {
 
                     if (score > best) {
                         best = score;
+                        bestMove = m;
                         if (score > alpha) alpha = score;
                     }
                     if (alpha >= beta) break;
                 }
 
                 if (!hasLegalMove) return pos_.in_check() ? -kMateScore + ply : 0;
+
+                if (tt_ != nullptr) {
+                    const Bound bound = best >= beta ? Bound::Lower
+                                        : best > alphaOrig ? Bound::Exact
+                                                           : Bound::Upper;
+                    // A fail-low has no meaningful best move.
+                    tt_->store(pos_.key(), bound == Bound::Upper ? Move::none() : bestMove,
+                               score_to_tt(best, ply), depth, bound);
+                }
                 return best;
             }
 
@@ -148,6 +196,10 @@ namespace KnightLift {
             SearchResult search_root(int depth, Move first, bool useAlphaBeta) {
                 MoveList list;
                 generate_pseudo_legal(pos_, list);
+                if (first.is_none() && tt_ != nullptr) {
+                    TTEntry e;
+                    if (tt_->probe(pos_.key(), e)) first = e.move;
+                }
                 if (!first.is_none()) list.move_to_front(first);
 
                 SearchResult result;
@@ -170,7 +222,12 @@ namespace KnightLift {
                     }
                 }
 
-                if (result.best.is_none()) result.score = pos_.in_check() ? -kMateScore : 0;
+                if (result.best.is_none()) {
+                    result.score = pos_.in_check() ? -kMateScore : 0;
+                } else if (tt_ != nullptr) {
+                    tt_->store(pos_.key(), result.best, score_to_tt(result.score, 0), depth,
+                               Bound::Exact);
+                }
                 result.nodes = nodes_;
                 return result;
             }
@@ -184,12 +241,17 @@ namespace KnightLift {
             Position &pos_;
             const SearchLimits *limits_;
             const std::atomic<bool> *stop_;
+            TranspositionTable *tt_;
             std::chrono::steady_clock::time_point start_;
             std::uint64_t nodes_ = 0;
             bool aborted_ = false;
             bool checkStop_ = false;
         };
     } // namespace
+
+    void tt_resize(std::size_t megabytes) { gTT.resize(megabytes); }
+    void tt_clear() { gTT.clear(); }
+    int tt_hashfull() { return gTT.hashfull(); }
 
     SearchResult search(Position &pos, int depth, bool useAlphaBeta) {
         Searcher searcher(pos, nullptr, nullptr);
@@ -198,7 +260,7 @@ namespace KnightLift {
 
     SearchResult search_iterative(Position &pos, const SearchLimits &limits,
                                   const std::atomic<bool> &stop, const InfoCallback &onInfo) {
-        Searcher searcher(pos, &limits, &stop);
+        Searcher searcher(pos, &limits, &stop, &gTT);
         SearchResult best;
 
         for (int depth = 1; depth <= limits.maxDepth && depth <= kMaxDepth; ++depth) {
@@ -208,7 +270,9 @@ namespace KnightLift {
             best = r;
             searcher.enable_stop_checks(); // depth 1 always completes
             if (onInfo) {
-                onInfo({depth, r.score, searcher.nodes(), searcher.elapsed_ms(), r.best});
+                SearchInfo info{depth, r.score, searcher.nodes(), searcher.elapsed_ms(), r.best};
+                info.hashfull = gTT.hashfull();
+                onInfo(info);
             }
 
             if (r.best.is_none()) break; // no legal moves

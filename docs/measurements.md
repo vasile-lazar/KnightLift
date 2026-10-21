@@ -52,3 +52,30 @@ Player: KL_3c
 "Win: Black mates": 2
 "Win: White mates": 6
 Finished match
+
+## 4a vs 4b engines
+4a:
+position startpos
+go depth 8
+info depth 1 score cp 0 nodes 40 time 0 pv a2a3
+info depth 2 score cp 0 nodes 142 time 0 pv a2a3
+info depth 3 score cp 0 nodes 1135 time 1 nps 1135000 pv a2a3
+info depth 4 score cp 0 nodes 3647 time 1 nps 3647000 pv a2a3
+info depth 5 score cp 0 nodes 28793 time 2 nps 14396500 pv a2a3
+info depth 6 score cp 0 nodes 113117 time 6 nps 18852833 pv a2a3
+info depth 7 score cp 0 nodes 993344 time 29 nps 34253241 pv a2a3
+info depth 8 score cp 0 nodes 8141928 time 439 nps 18546533 pv a2a3
+bestmove a2a3
+
+4b:
+position startpos
+go depth 8
+info depth 1 score cp 0 nodes 40 hashfull 0 time 0 pv a2a3
+info depth 2 score cp 0 nodes 142 hashfull 0 time 0 pv a2a3
+info depth 3 score cp 0 nodes 1135 hashfull 0 time 0 pv a2a3
+info depth 4 score cp 0 nodes 3251 hashfull 0 time 1 nps 3251000 pv a2a3
+info depth 5 score cp 0 nodes 18871 hashfull 1 time 1 nps 18871000 pv a2a3
+info depth 6 score cp 0 nodes 55858 hashfull 3 time 4 nps 13964500 pv a2a3
+info depth 7 score cp 0 nodes 260149 hashfull 8 time 9 nps 28905444 pv a2a3
+info depth 8 score cp 0 nodes 1052459 hashfull 35 time 63 nps 16705698 pv a2a3
+bestmove a2a3
