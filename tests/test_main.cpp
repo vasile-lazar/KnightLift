@@ -463,6 +463,23 @@ namespace {
         // Phase clamp: far more than 24 phase points (promotions) must not break anything.
         a.set_from_fen("QQQQkQQQ/QQQQQQQQ/8/8/8/8/8/4K3 w - - 0 1");
         check(std::abs(evaluate(a)) < 30000, "eval: phase clamp, no overflow");
+
+        // Isolated pawns: a2+c2 vs a2+b2 have identical PST sums, so the difference is exactly
+        // two isolated penalties (both setups have the same passed bonuses).
+        a.set_from_fen("4k3/8/8/8/8/8/P1P5/4K3 w - - 0 1");
+        b.set_from_fen("4k3/8/8/8/8/8/PP6/4K3 w - - 0 1");
+        check(evaluate(b) - evaluate(a) == 30, "eval: isolated pawn penalty");
+
+        // Doubled pawns (plus the isolation that comes with them) cost clearly more than a
+        // pawn pair that is neither.
+        a.set_from_fen("4k3/8/8/8/8/P7/P7/4K3 w - - 0 1");
+        b.set_from_fen("4k3/8/8/8/8/1P6/P7/4K3 w - - 0 1");
+        check(evaluate(b) > evaluate(a) + 40, "eval: doubled pawn penalty");
+
+        // Passed pawn: e6 is blocked from passing by a black d7 pawn, but passed against a7.
+        a.set_from_fen("4k3/3p4/4P3/8/8/8/8/4K3 w - - 0 1");
+        b.set_from_fen("4k3/p7/4P3/8/8/8/8/4K3 w - - 0 1");
+        check(evaluate(b) > evaluate(a) + 50, "eval: passed pawn bonus");
     }
 
     void test_tt() {

@@ -89,6 +89,7 @@ bestmove a2a3
 4e: 17,364,113 nodes in 0.94 seconds
 4f: 2,894,330 nodes in 0.2 seconds
 5a: 6,178,242 nodes in 0.5 seconds
+5b: 5,630,863 nodes in 0.5 seconds
 
 | 	            | history off         | 	history on          |
 |--------------|---------------------|----------------------|
