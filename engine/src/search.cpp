@@ -3,6 +3,8 @@
 #include <chrono>
 #include <utility>
 #include <array>
+#include <algorithm>
+#include <cstdlib>
 
 #include "eval.hpp"
 #include "movegen.hpp"
@@ -11,6 +13,8 @@
 namespace KnightLift {
     namespace {
         TranspositionTable gTT(16);
+        constexpr int kHistoryMax = 16384;
+        using HistoryTable = std::array<std::array<int, kNumSquares>, kNumSquares>;
 
         // Mate scores are stored relative to the node, not to the root.
         int score_to_tt(int score, int ply) {
@@ -35,12 +39,13 @@ namespace KnightLift {
             return 10 * (victim + 1) - (attacker + 1);
         }
 
-        int score_move(const Position &pos, Move m, Move first, Move killer0, Move killer1) {
-            if (m == first) return 1'000'000;
-            if (m.is_capture() || m.is_promotion()) return 100 + mvv_lva(pos, m);
-            if (m == killer0) return 90;
-            if (m == killer1) return 80;
-            return 0;
+        int score_move(const Position &pos, Move m, Move first, Move killer0, Move killer1,
+                       const HistoryTable &history) {
+            if (m == first) return 2'000'000;
+            if (m.is_capture() || m.is_promotion()) return 1'000'000 + mvv_lva(pos, m);
+            if (m == killer0) return 900'000;
+            if (m == killer1) return 800'000;
+            return history[to_index(m.from())][to_index(m.to())];
         }
 
         // Selection-sort step: brings the best remaining move to index i.
@@ -156,6 +161,7 @@ namespace KnightLift {
                 if (depth == 0) return quiescence(alpha, beta, true);
 
                 const int alphaOrig = alpha;
+                const Color us = pos_.side_to_move();
                 Move ttMove = Move::none();
                 if (tt_ != nullptr) {
                     TTEntry e;
@@ -177,9 +183,12 @@ namespace KnightLift {
 
                 int scores[kMaxMoves];
                 for (std::size_t i = 0; i < list.size(); ++i) {
-                    scores[i] = score_move(pos_, list[i], ttMove, killers_[ply][0], killers_[ply][1]);
+                    scores[i] = score_move(pos_, list[i], ttMove, killers_[ply][0],
+                                           killers_[ply][1], history_[to_index(us)]);
                 }
 
+                Move quiets[kMaxMoves];
+                int numQuiets = 0;
                 int best = -kInfinity;
                 Move bestMove = Move::none();
                 bool hasLegalMove = false;
@@ -201,10 +210,17 @@ namespace KnightLift {
                         bestMove = m;
                         if (score > alpha) alpha = score;
                     }
+                    const bool quiet = !m.is_capture() && !m.is_promotion();
                     if (alpha >= beta) {
-                        if (!m.is_capture() && !m.is_promotion()) store_killer(ply, m);
+                        if (quiet) {
+                            store_killer(ply, m);
+                            const int bonus = std::min(depth * depth, 1600);
+                            update_history(us, m, bonus);
+                            for (int q = 0; q < numQuiets; ++q) update_history(us, quiets[q], -bonus);
+                        }
                         break;
                     }
+                    if (quiet) quiets[numQuiets++] = m;
                 }
 
                 if (!hasLegalMove) return pos_.in_check() ? -kMateScore + ply : 0;
@@ -225,6 +241,7 @@ namespace KnightLift {
             // `first` (if not none) is searched first, e.g. the best move of the previous iteration.
             SearchResult search_root(int depth, Move first, bool useAlphaBeta) {
                 MoveList list;
+                const Color us = pos_.side_to_move();
                 generate_pseudo_legal(pos_, list);
                 if (first.is_none() && tt_ != nullptr) {
                     TTEntry e;
@@ -234,7 +251,8 @@ namespace KnightLift {
 
                 int scores[kMaxMoves];
                 for (std::size_t i = 0; i < list.size(); ++i) {
-                    scores[i] = score_move(pos_, list[i], first, Move::none(), Move::none());
+                    scores[i] = score_move(pos_, list[i], first, Move::none(), Move::none(),
+                                           history_[to_index(us)]);
                 }
 
                 SearchResult result;
@@ -281,6 +299,11 @@ namespace KnightLift {
                 killers_[ply][0] = m;
             }
 
+            void update_history(Color c, Move m, int bonus) {
+                int &h = history_[to_index(c)][to_index(m.from())][to_index(m.to())];
+                h += bonus - h * std::abs(bonus) / kHistoryMax;
+            }
+
             Position &pos_;
             const SearchLimits *limits_;
             const std::atomic<bool> *stop_;
@@ -290,6 +313,7 @@ namespace KnightLift {
             bool aborted_ = false;
             bool checkStop_ = false;
             std::array<std::array<Move, 2>, kMaxDepth + 2> killers_{};
+            std::array<HistoryTable, kNumColors> history_{};
         };
     } // namespace
 
