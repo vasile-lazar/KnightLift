@@ -219,5 +219,15 @@ which alternatives existed, and why.
 - En passant is hashed only if a pawn of the side to move can capture on the ep square, so identical positions get identical keys (TT hits, repetition detection).
 - set_from_fen computes the key from scratch (compute_key); consistent() verifies key_ == compute_key().
 
+## 4b. Transposition table
+
+- Entry 12 bytes: key32 (low 32 bits of the Zobrist key), best move, int16 score, uint8 depth, generation (6 bits) + bound (2 bits).
+- Index by multiply-shift ((key * size) >> 64), so the size is not limited to a power of two. key32 uses the LOW bits because the index is derived from the high bits; using the high bits for both would make the stored check redundant.
+- One entry per slot. Replace if: exact bound, different position, depth + 4 > stored depth, or older generation. The old move is kept when the same position is stored without a move.
+- Mate scores are stored relative to the node (not the root) and converted back on probe, so mate distances stay correct across transpositions.
+- Cutoff only when stored depth >= required depth and the bound is compatible with the window. Never at the root (ply 0). The TT move is searched first at every node and at the root.
+- Quiescence does not use the table (postponed). Interaction with repetition detection (path dependence) will be revisited when draw detection is added.
+- UCI: option Hash (MB, default 16, min 1, max 4096); ucinewgame clears the table; one generation per search.
+
 ## Sources
 - Chess Programming Wiki: Bitboards, Square Mapping Considerations.
