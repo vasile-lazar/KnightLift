@@ -235,6 +235,15 @@ which alternatives existed, and why.
 - Search is single-threaded and depth-limited, so total nodes is deterministic: it is the signature of a search version and the main yardstick for steps whose Elo gain is too small to measure while the eval is material-only.
 - Elo/SPRT matches are postponed until the hand-crafted eval (stage 5) gives games enough signal.
 
+## 4c. Move ordering: TT move and MVV-LVA in the main search
+
+- Every move gets a score; the search picks the best remaining move by selection sort, one move at a time. Picking lazily avoids sorting moves that are never searched after an early cutoff.
+- Order: TT move (or the previous iteration's best move at the root), then captures and promotions by MVV-LVA, then quiet moves in generation order.
+- The TT move is scored like any other move instead of being moved to the front. A move that is not in the list (a 32-bit key collision) is simply never selected, so no special handling is needed.
+- Yardstick: bench total nodes at depth 6, before and after. Bad-capture detection (SEE) is postponed.
+
+
+
 
 ## Sources
 - Chess Programming Wiki: Bitboards, Square Mapping Considerations.

@@ -34,6 +34,22 @@ namespace KnightLift {
             return 10 * (victim + 1) - (attacker + 1);
         }
 
+        int score_move(const Position &pos, Move m, Move first) {
+            if (m == first) return 1'000'000;
+            if (m.is_capture() || m.is_promotion()) return 100 + mvv_lva(pos, m);
+            return 0;
+        }
+
+        // Selection-sort step: brings the best remaining move to index i.
+        void pick_best(MoveList &list, int *scores, std::size_t i) {
+            std::size_t top = i;
+            for (std::size_t j = i + 1; j < list.size(); ++j) {
+                if (scores[j] > scores[top]) top = j;
+            }
+            std::swap(scores[i], scores[top]);
+            list.swap(i, top);
+        }
+
         class Searcher {
         public:
             Searcher(Position &pos, const SearchLimits *limits, const std::atomic<bool> *stop,
@@ -130,7 +146,7 @@ namespace KnightLift {
                 return best;
             }
 
-                        int alphabeta(int depth, int ply, int alpha, int beta) {
+            int alphabeta(int depth, int ply, int alpha, int beta) {
                 ++nodes_;
                 if (checkStop_ && (nodes_ & 2047) == 0 && should_stop()) aborted_ = true;
                 if (aborted_) return 0;
@@ -155,12 +171,18 @@ namespace KnightLift {
 
                 MoveList list;
                 generate_pseudo_legal(pos_, list);
-                if (!ttMove.is_none()) list.move_to_front(ttMove);
+
+                int scores[kMaxMoves];
+                for (std::size_t i = 0; i < list.size(); ++i) {
+                    scores[i] = score_move(pos_, list[i], ttMove);
+                }
 
                 int best = -kInfinity;
                 Move bestMove = Move::none();
                 bool hasLegalMove = false;
-                for (const Move m: list) {
+                for (std::size_t i = 0; i < list.size(); ++i) {
+                    pick_best(list, scores, i);
+                    const Move m = list[i];
                     pos_.make_move(m);
                     if (pos_.king_left_in_check()) {
                         pos_.unmake_move(m);
@@ -182,9 +204,11 @@ namespace KnightLift {
                 if (!hasLegalMove) return pos_.in_check() ? -kMateScore + ply : 0;
 
                 if (tt_ != nullptr) {
-                    const Bound bound = best >= beta ? Bound::Lower
-                                        : best > alphaOrig ? Bound::Exact
-                                                           : Bound::Upper;
+                    const Bound bound = best >= beta
+                                            ? Bound::Lower
+                                            : best > alphaOrig
+                                                  ? Bound::Exact
+                                                  : Bound::Upper;
                     // A fail-low has no meaningful best move.
                     tt_->store(pos_.key(), bound == Bound::Upper ? Move::none() : bestMove,
                                score_to_tt(best, ply), depth, bound);
@@ -200,11 +224,18 @@ namespace KnightLift {
                     TTEntry e;
                     if (tt_->probe(pos_.key(), e)) first = e.move;
                 }
-                if (!first.is_none()) list.move_to_front(first);
+
+
+                int scores[kMaxMoves];
+                for (std::size_t i = 0; i < list.size(); ++i) {
+                    scores[i] = score_move(pos_, list[i], first);
+                }
 
                 SearchResult result;
                 result.score = -kInfinity;
-                for (const Move m: list) {
+                for (std::size_t i = 0; i < list.size(); ++i) {
+                    pick_best(list, scores, i);
+                    const Move m = list[i];
                     pos_.make_move(m);
                     if (pos_.king_left_in_check()) {
                         pos_.unmake_move(m);
