@@ -9,6 +9,7 @@
 #include "bitboard.hpp"
 #include "types.hpp"
 #include "move.hpp"
+#include "zobrist.hpp"
 
 namespace KnightLift {
 
@@ -55,6 +56,9 @@ namespace KnightLift {
         void make_move(Move m);
         void unmake_move(Move m);
         bool consistent() const;  // debug: bitboards agree with the mailbox
+        Key key() const { return key_; }
+        Key compute_key() const; // from scratch, used by set_from_fen and consistent()
+
         // After make_move: true if the side that just moved left its own king attacked.
         bool king_left_in_check() const {
             return is_attacked(king_square(~sideToMove_), sideToMove_);
@@ -71,7 +75,9 @@ namespace KnightLift {
             CastlingRights castling = 0;
             Square epSquare = Square::None;
             int halfmoveClock = 0;
+            Key key = 0;
         };
+        Key ep_key() const; // 0 if no ep square or no pawn can capture on it
 
         static constexpr std::size_t kMaxGamePly = 2048;
         std::array<State, kMaxGamePly> history_;
@@ -82,6 +88,7 @@ namespace KnightLift {
         std::array<Piece, kNumSquares> board_;
 
         Color sideToMove_;
+        Key key_ = 0;
         CastlingRights castling_;
         Square epSquare_;
         int halfmoveClock_;

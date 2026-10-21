@@ -192,6 +192,77 @@ namespace {
         }
     }
 
+    // ---- Zobrist ----------------------------------------------------------------
+
+    bool play(Position &pos, const std::string &uci) {
+        MoveList list;
+        generate_legal(pos, list);
+        for (const Move m: list) {
+            if (move_to_uci(m) == uci) {
+                pos.make_move(m);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool key_walk(Position &pos, int depth) {
+        if (depth == 0) return true;
+
+        const Key before = pos.key();
+        MoveList list;
+        generate_legal(pos, list);
+        for (const Move m: list) {
+            pos.make_move(m);
+            const bool ok = pos.key() == pos.compute_key() && key_walk(pos, depth - 1);
+            pos.unmake_move(m);
+            if (!ok || pos.key() != before) return false;
+        }
+        return true;
+    }
+
+    void test_zobrist() {
+        Position pos;
+
+        // Incremental key == from-scratch key at every node, and unmake restores it.
+        for (const PerftCase &c: kPerftCases) {
+            pos.set_from_fen(c.fen);
+            check(key_walk(pos, 3), "zobrist walk: " + std::string(c.name));
+        }
+
+        // Transposition: same position reached by two move orders.
+        Position a, b, start;
+        start.set_from_fen(kStartFen);
+        a.set_from_fen(kStartFen);
+        b.set_from_fen(kStartFen);
+        bool ok = true;
+        for (const char *m: {"g1f3", "g8f6", "b1c3", "b8c6"}) ok = play(a, m) && ok;
+        for (const char *m: {"b1c3", "b8c6", "g1f3", "g8f6"}) ok = play(b, m) && ok;
+        check(ok, "zobrist transposition: moves are legal");
+        check(a.key() == b.key(), "zobrist transposition: equal keys");
+        check(a.key() != start.key(), "zobrist transposition: differs from start");
+
+        // En passant: hashed only when a pawn can capture.
+        // 1.e4 (no black pawn on d4/f4): ep square must not change the key.
+        a.set_from_fen(kStartFen);
+        play(a, "e2e4");
+        b.set_from_fen("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1");
+        check(a.key() == b.key(), "zobrist ep: no capturing pawn, key ignores ep");
+        check(a.ep_square() != Square::None, "zobrist ep: ep square still stored");
+
+        // Black pawn on d4 can capture on e3: ep must change the key.
+        a.set_from_fen("4k3/8/8/8/3pP3/8/8/4K3 b - e3 0 1");
+        b.set_from_fen("4k3/8/8/8/3pP3/8/8/4K3 b - - 0 1");
+        check(a.key() != b.key(), "zobrist ep: capturing pawn, key includes ep");
+
+        // Side to move and castling rights change the key.
+        a.set_from_fen("r3k2r/8/8/8/8/8/8/R3K2R w KQkq - 0 1");
+        b.set_from_fen("r3k2r/8/8/8/8/8/8/R3K2R b KQkq - 0 1");
+        check(a.key() != b.key(), "zobrist: side to move");
+        b.set_from_fen("r3k2r/8/8/8/8/8/8/R3K2R w Kkq - 0 1");
+        check(a.key() != b.key(), "zobrist: castling rights");
+    }
+
     std::string run_uci(const std::string &script) {
         std::istringstream in(script);
         std::ostringstream out;
@@ -304,6 +375,7 @@ int main() {
     test_move_counts();
     test_make_unmake();
     test_perft();
+    test_zobrist();
     test_uci();
     test_search();
     test_alphabeta();

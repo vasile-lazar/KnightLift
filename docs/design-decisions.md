@@ -210,5 +210,14 @@ which alternatives existed, and why.
   later).
 - Measured: KL_3d vs KL_3c match result (record in measurements.md).
 
+## 4a. Zobrist hashing
+
+- 64-bit keys: piece×square (12×64), castling (16, indexed by the 4-bit mask), ep file (8), side to move.
+- Keys are generated at compile time with splitmix64 and a fixed seed: no init function, reproducible runs.
+- Incremental update inside put_piece/remove_piece/move_piece; make_move only handles castling, ep and side.
+- State stores the previous key; unmake restores it by assignment instead of reversing the xors.
+- En passant is hashed only if a pawn of the side to move can capture on the ep square, so identical positions get identical keys (TT hits, repetition detection).
+- set_from_fen computes the key from scratch (compute_key); consistent() verifies key_ == compute_key().
+
 ## Sources
 - Chess Programming Wiki: Bitboards, Square Mapping Considerations.
