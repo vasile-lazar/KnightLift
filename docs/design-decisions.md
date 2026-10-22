@@ -357,5 +357,13 @@ which alternatives existed, and why.
 - Rejected for now: engine-based quiet filter (static eval against quiescence score, a possible refinement in 5e-3), Stockfish-labelled data (not needed for Texel; relevant for NNUE in stage 7), self-play data (slow and weak at this stage).
 - Measurement: the script prints games read, games used, positions per file and the result distribution; spot-check ten positions in the engine with `position fen ...` and `d`. The final value of the data is measured only by the Elo match after tuning (5e-4).
 
+## 5e-4: Tuned parameters, round 1 (rejected)
+- The Texel result of 5e-3 (9.5 million positions from Lichess Elite 2020-09 to 2020-12, K = 0.00541, validation loss 0.18939 -> 0.18547) was applied to the evaluation constants on branch `stage-5e4-tuned-values` and compared with the previous build.
+- Fixed depth 7 (400 games): 112-108-180, +3.5 +/- 25.3 Elo, so no gain in eval quality. Timed 8+0.08 (stopped at 185 games): 59-81-45, about -41 +/- 44 Elo. Bench 7 nodes 5,969,646 -> 7,562,799 and bench 8 12,431,983 -> 18,867,033 (tree about 1.3 to 1.5x), nps about -7%.
+- Interpretation: labels from human blitz results are noisy (the eval explains about 16% of the result variance), the quiet filter was crude, and human play rewards attacking factors more than an engine defender does; the tuned values fit the data but do not play better.
+- Decision: values not merged; the trace, data script and tuner remain. Raw output kept in `docs/tuning/5e-round1.txt`.
+- Next: labels from Stockfish evaluations (Lichess evaluation database), with a quiescence-based quiet filter, instead of game results.
+
+
 ## Sources
 - Chess Programming Wiki: Bitboards, Square Mapping Considerations.

@@ -93,7 +93,7 @@ bestmove a2a3
 5c: 6,106,503 nodes in 0.6 seconds
 5d: 5,970,017 nodes in 0.77 seconds
 4g: 5,969,646 nodes in 0.92 seconds
-
+5e: 7,562,799 nodes in 1.2 seconds
 
 | 	            | history off         | 	history on          |
 |--------------|---------------------|----------------------|
@@ -155,4 +155,14 @@ bestmove a2a3
 - Result share (White POV): win 0.47, draw 0.114, loss 0.416 in every month.
 - About 78% of games passed the filters (the rest were non-Normal terminations or too short).
 
+### 5e-3 Texel tuning run (tools/tune.cpp, 16 threads)
+- Data: 9,542,340 train and 1,057,076 val positions (Lichess Elite 2020-09..12). 300 epochs, Adam, lr 1.0 with cosine decay to 10%.
+- K = 0.00540615.
+- Loss: train 0.189476 -> 0.185407, val 0.189389 -> 0.185470. A constant predictor scores about 0.221, so the eval's explained variance went from about 14.2% to 16.0%.
+- No overfitting (train/val gap < 0.0001); about 95% of the gain in the first 100 epochs. Output file: tuned_5e.txt.
+
+### 5e vs pre5e (cutechess-cli, tc 8+0.08, Hash 16, 8moves_v3, -repeat, concurrency 6)
+- Result (5e first): 59-81-45 in 185 games, score 0.441 (about -41 +/- 44 Elo), stopped manually, SPRT not concluded. Draw ratio 24% (about 50% in earlier matches).
+- Bench 7: pre5e 5,969,646 nodes (739 ms), 5e 7,562,799 (1,005 ms). Bench 8: 12,431,983 vs 18,867,033. Tree growth about 1.3 to 1.5x, nps about -7%.
+- Next: fixed-depth match (depth 7, no SPRT) to separate eval quality from speed.
 
