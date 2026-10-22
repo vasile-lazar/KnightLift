@@ -127,3 +127,14 @@ bestmove a2a3
 - 2,000,000 evals: 146 ms = 73 ns/eval; 5,000,000 evals: 363 ms = 72 ns/eval.
 - Checksum per round (10 bench FENs): 435 (fingerprint of the current eval; must stay 435 for any behaviour-preserving refactor).
 - Search at the same build: about 7.06 Mnps = about 143 ns/node, so the eval is roughly 40-50% of node time (microbench is hot-cache and likely understates).
+
+### bench eval ablation (Release, GCC, 500000 rounds = 5M evals)
+| build                                      | ns/eval |
+|--------------------------------------------|---------|
+| full eval                                  | 72      |
+| no pawn_structure                          | 58      |
+| no mobility                                | 61      |
+| no king_safety                             | 53      |
+| none of the three (material + PST + phase) | 24      |
+- Approximate cost per part: PST loop 24 ns, king safety 19, pawn structure 14, mobility 11.
+- Decision: incremental material/PST/phase first (largest part, bit-identical result), pawn hash table afterwards.
