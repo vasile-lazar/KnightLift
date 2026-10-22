@@ -6,6 +6,7 @@
 
 #include "position.hpp"
 #include "attacks.hpp"
+#include "eval_tables.hpp"
 
 namespace KnightLift {
     namespace {
@@ -53,6 +54,7 @@ namespace KnightLift {
         fullmoveNumber_ = 1;
         historyPly_ = 0;
         key_ = 0;
+        psqMg_ = psqEg_ = phase_ = 0;
     }
 
     void Position::put_piece(Piece p, Square s) {
@@ -62,6 +64,9 @@ namespace KnightLift {
         occupied_ |= bb;
         key_ ^= Zobrist::kKeys.pieceSquare[to_index(p)][to_index(s)];
         board_[to_index(s)] = p;
+        psqMg_ += EvalTables::kPieceMg[to_index(p)][to_index(s)];
+        psqEg_ += EvalTables::kPieceEg[to_index(p)][to_index(s)];
+        phase_ += EvalTables::kPhaseWeight[to_index(type_of(p))];
     }
 
     bool Position::set_from_fen(std::string_view fen) {
@@ -239,6 +244,9 @@ namespace KnightLift {
 
     void Position::remove_piece(Square s) {
         const Piece p = board_[to_index(s)];
+        psqMg_ -= EvalTables::kPieceMg[to_index(p)][to_index(s)];
+        psqEg_ -= EvalTables::kPieceEg[to_index(p)][to_index(s)];
+        phase_ -= EvalTables::kPhaseWeight[to_index(type_of(p))];
         const Bitboard bb = square_bb(s);
         pieceBB_[to_index(p)] ^= bb;
         colorBB_[to_index(color_of(p))] ^= bb;
@@ -250,6 +258,10 @@ namespace KnightLift {
     // Precondition: `to` is empty.
     void Position::move_piece(Square from, Square to) {
         const Piece p = board_[to_index(from)];
+        psqMg_ += EvalTables::kPieceMg[to_index(p)][to_index(to)] -
+          EvalTables::kPieceMg[to_index(p)][to_index(from)];
+        psqEg_ += EvalTables::kPieceEg[to_index(p)][to_index(to)] -
+                  EvalTables::kPieceEg[to_index(p)][to_index(from)];
         const Bitboard fromTo = square_bb(from) | square_bb(to);
         pieceBB_[to_index(p)] ^= fromTo;
         colorBB_[to_index(color_of(p))] ^= fromTo;
@@ -276,6 +288,9 @@ namespace KnightLift {
         st.epSquare = epSquare_;
         st.halfmoveClock = halfmoveClock_;
         st.key = key_;
+        st.psqMg = psqMg_;
+        st.psqEg = psqEg_;
+        st.phase = phase_;
 
         key_ ^= ep_key();
         key_ ^= Zobrist::kKeys.castling[castling_];
@@ -376,6 +391,9 @@ namespace KnightLift {
         epSquare_ = st.epSquare;
         halfmoveClock_ = st.halfmoveClock;
         key_ = st.key;
+        psqMg_ = st.psqMg;
+        psqEg_ = st.psqEg;
+        phase_ = st.phase;
     }
 
     // A position d plies ago equals the current one (d even, >= 4). A repeat inside the
@@ -403,6 +421,17 @@ namespace KnightLift {
     bool Position::consistent() const {
         std::array<Bitboard, kNumPieces> bb{};
         if (key_ != compute_key()) return false;
+        int mg = 0;
+        int eg = 0;
+        int ph = 0;
+        for (std::size_t i = 0; i < kNumSquares; ++i) {
+            const Piece p = board_[i];
+            if (p == Piece::None) continue;
+            mg += EvalTables::kPieceMg[to_index(p)][i];
+            eg += EvalTables::kPieceEg[to_index(p)][i];
+            ph += EvalTables::kPhaseWeight[to_index(type_of(p))];
+        }
+        if (mg != psqMg_ || eg != psqEg_ || ph != phase_) return false;
 
         for (std::size_t i = 0; i < kNumSquares; ++i) {
             const Piece p = board_[i];

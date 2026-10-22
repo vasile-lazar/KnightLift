@@ -138,3 +138,8 @@ bestmove a2a3
 | none of the three (material + PST + phase) | 24      |
 - Approximate cost per part: PST loop 24 ns, king safety 19, pawn structure 14, mobility 11.
 - Decision: incremental material/PST/phase first (largest part, bit-identical result), pawn hash table afterwards.
+
+### Incremental material/PST/phase (Release, GCC, i5-14400F)
+- bench eval: 72 ns/eval -> 51 ns/eval (-29%). Checksum per round unchanged (435).
+- bench 8: total nodes 12,431,983 (identical to 4g, all per-position lines identical); time <fill in> ms (4g median 1761 ms).
+- Eval is now roughly 35-40% of node time; remaining cost: king safety about 19 ns, pawn structure about 14, mobility about 11.

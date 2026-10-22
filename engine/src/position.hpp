@@ -61,6 +61,9 @@ namespace KnightLift {
         void unmake_move(Move m);
         bool consistent() const;  // debug: bitboards agree with the mailbox
         Key key() const { return key_; }
+        int psq_mg() const { return psqMg_; }  // White minus Black material + PST, middlegame
+        int psq_eg() const { return psqEg_; }
+        int phase() const { return phase_; }   // unclamped sum of piece phase weights
         Key compute_key() const; // from scratch, used by set_from_fen and consistent()
 
         // After make_move: true if the side that just moved left its own king attacked.
@@ -80,6 +83,9 @@ namespace KnightLift {
             Square epSquare = Square::None;
             int halfmoveClock = 0;
             Key key = 0;
+            int psqMg = 0;
+            int psqEg = 0;
+            int phase = 0;
         };
         Key ep_key() const; // 0 if no ep square or no pawn can capture on it
 
@@ -93,6 +99,9 @@ namespace KnightLift {
 
         Color sideToMove_;
         Key key_ = 0;
+        int psqMg_ = 0;
+        int psqEg_ = 0;
+        int phase_ = 0;
         CastlingRights castling_;
         Square epSquare_;
         int halfmoveClock_;
