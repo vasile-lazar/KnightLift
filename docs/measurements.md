@@ -116,3 +116,10 @@ bestmove a2a3
 - Result (5d first): 109-109-267 in 485 games, Elo 0.0 +/- 20.7, LOS 50%. 6 unfinished games discarded. SPRT elo0=0 elo1=10: LLR -0.45, no bound reached.
 - 259 of 485 games were 3-fold repetition draws, which compresses decisive results (motivates 4g).
 - Conclusion: no measurable gain at initial values and about 25% eval cost; kept for 5e tuning and for the single-pass eval optimisation, which should recover the speed.
+
+### Single-pass eval (branch perf-eval-single-pass, not merged)
+- Goal: recover the nps lost to 5d by computing each attack bitboard once for mobility and king zone.
+- Correctness: bench 8 total nodes 12,431,983 and every per-position line identical to 4g; new equivalence test passes.
+- Speed (bench 8, 5 runs each, alternating, nothing else running): 4g median 1761 ms (about 7.06 Mnps), single pass median 1802 ms (about 6.9 Mnps). Single pass about 2.3% slower, batches do not overlap.
+- Conclusion: the repeated piece_attacks call is not the eval bottleneck; refactor not merged. Next: measure the eval in isolation before optimising anything else.
+
