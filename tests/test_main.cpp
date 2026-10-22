@@ -314,6 +314,9 @@ namespace {
 
         const std::string bench = run_uci("bench 3\n");
         check(has(bench, "Total nodes:") && has(bench, "Nodes/second:"), "uci bench");
+
+        const std::string benchEval = run_uci("bench eval 10\n");
+        check(has(benchEval, "ns/eval:") && has(benchEval, "Checksum:"), "uci bench eval");
     }
 
     void test_search_iterative() {

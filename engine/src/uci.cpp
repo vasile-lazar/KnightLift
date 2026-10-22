@@ -9,7 +9,9 @@
 #include <string>
 #include <thread>
 #include <chrono>
+#include <vector>
 
+#include "eval.hpp"
 #include "movegen.hpp"
 #include "perft.hpp"
 #include "position.hpp"
@@ -250,8 +252,19 @@ namespace KnightLift {
             }
 
             void handle_bench(std::istringstream &args) {
+                std::string first;
+                args >> first;
+                if (first == "eval") {
+                    handle_bench_eval(args);
+                    return;
+                }
                 int depth = 8;
-                args >> depth;
+                if (!first.empty()) {
+                    try {
+                        depth = std::stoi(first);
+                    } catch (...) {
+                    } // malformed depth: keep the default
+                }
                 depth = std::clamp(depth, 1, kMaxDepth);
 
                 std::uint64_t totalNodes = 0;
@@ -278,6 +291,34 @@ namespace KnightLift {
                 send("===========================\nTotal nodes: " + std::to_string(totalNodes) +
                      "\nTime ms: " + std::to_string(ms) +
                      "\nNodes/second: " + std::to_string(totalNodes * 1000 / ms));
+            }
+
+            void handle_bench_eval(std::istringstream &args) {
+                int rounds = 200000;
+                args >> rounds;
+                rounds = std::clamp(rounds, 1, 100000000);
+
+                std::vector<Position> positions;
+                for (const std::string_view fen: kBenchFens) {
+                    Position p;
+                    if (p.set_from_fen(fen)) positions.push_back(p);
+                }
+
+                std::int64_t checksum = 0;
+                const auto start = std::chrono::steady_clock::now();
+                for (int r = 0; r < rounds; ++r) {
+                    for (const Position &p: positions) checksum += evaluate(p);
+                }
+                const auto ns = std::max<std::int64_t>(
+                    1, std::chrono::duration_cast<std::chrono::nanoseconds>(
+                        std::chrono::steady_clock::now() - start).count());
+
+                const std::int64_t calls = static_cast<std::int64_t>(rounds) *
+                                           static_cast<std::int64_t>(positions.size());
+                send("Evals: " + std::to_string(calls) +
+                     "\nTime ms: " + std::to_string(ns / 1000000) +
+                     "\nns/eval: " + std::to_string(ns / std::max<std::int64_t>(1, calls)) +
+                     "\nChecksum: " + std::to_string(checksum));
             }
 
             std::istream &in_;
