@@ -116,3 +116,9 @@ bestmove a2a3
 - Result (5d first): 109-109-267 in 485 games, Elo 0.0 +/- 20.7, LOS 50%. 6 unfinished games discarded. SPRT elo0=0 elo1=10: LLR -0.45, no bound reached.
 - 259 of 485 games were 3-fold repetition draws, which compresses decisive results (motivates 4g).
 - Conclusion: no measurable gain at initial values and about 25% eval cost; kept for 5e tuning and for the single-pass eval optimisation, which should recover the speed.
+
+### 4g vs 5d (cutechess-cli, tc 8+0.08, Hash 16, 8moves_v3, -repeat, concurrency 6)
+- Builds: 5d bench7 = 5,970,017 nodes; 4g bench7 = <fill in> nodes (Release, GCC).
+- Result (4g first): 140-113-247 in 500 games, Elo +18.8 +/- 21.7, LOS 95.5%. 6 unfinished games discarded. SPRT elo0=0 elo1=10: LLR 1.13, no bound reached.
+- Draws: 3-fold repetition 227/500 (45%, was 259/485 = 53% in 5d vs 5c), fifty-move 3, insufficient material 16, stalemate 1. Draw ratio 49.4% (was 55.1%).
+- Conclusion: draw detection works as designed and probably gains a little Elo. Remaining repetition draws are mostly correct (eval about 0); contempt is the next lever, after 5e.

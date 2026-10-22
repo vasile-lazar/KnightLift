@@ -316,6 +316,15 @@ which alternatives existed, and why.
 - Elo vs the previous build with the same eval (cutechess, new version first, tc 8+0.08, SPRT elo0=0 elo1=10). Also compare the share of "Draw by 3-fold repetition" games, which should drop clearly. Bench nodes may change slightly (draw scores prune differently).
 - 289 of 501 games in the 5c vs 5b match and 259 of 485 in 5d vs 5c ended by 3-fold repetition. Without repetition awareness the engine cannot avoid repeating when ahead or exploit it when behind, which also wastes eval gains and inflates the draw rate.
 
+## Single-pass evaluation (performance refactor, no behaviour change)
+- Mobility (5c) and king-zone attackers (5d) each called `piece_attacks` for every knight, bishop, rook and queen. The new `evaluate` computes each attack bitboard once and uses it for both terms: `popcount(attacks & mobilityArea[own])` and `attacks & kingZone[enemy]` (attacker count and weight units).
+- The mobility areas and king zones of both colours are computed before the piece loop, since a piece of one colour feeds the other colour's king-safety counters.
+- The pawn shield and the attack penalty formula became helpers (`king_shield`, `attack_penalty`) shared by `evaluate` and the public `king_safety`, so the formula exists once.
+- The old straightforward implementation stays as `evaluate_reference` and is compared against `evaluate` in a test over every node of a depth-2 walk of the perft positions. It also gives 5e a reference when the tuner touches the eval.
+- 5d reduced nps by about 25% (bench 7: 0.60 s -> 0.77 s), which this step is meant to recover.
+- Rejected for now: incremental PST/phase updates in `make_move`, a pawn hash table, and merging the PST loop's attack use further. They are separate, measurable steps.
+- Measurement: bench 7 total nodes and every per-position line must equal the 4g build exactly (same eval); only time and nps change. No Elo match is needed for an identical eval.
+
 
 
 
