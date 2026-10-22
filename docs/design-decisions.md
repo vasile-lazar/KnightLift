@@ -314,6 +314,10 @@ which alternatives existed, and why.
 - Graph-history interaction: TT entries can store a draw score that depends on the path. Standard in engines, ignored for now.
 - Repetition in `evaluate` (wrong layer, eval has no path), a repetition hash table (the State stack scan limited by the halfmove clock is cheap enough), a contempt value (later, after tuning), a UCI option to switch it off (add only if the Elo match needs an ablation).
 - Elo vs the previous build with the same eval (cutechess, new version first, tc 8+0.08, SPRT elo0=0 elo1=10). Also compare the share of "Draw by 3-fold repetition" games, which should drop clearly. Bench nodes may change slightly (draw scores prune differently).
+- 289 of 501 games in the 5c vs 5b match and 259 of 485 in 5d vs 5c ended by 3-fold repetition. Without repetition awareness the engine cannot avoid repeating when ahead or exploit it when behind, which also wastes eval gains and inflates the draw rate.
+
+
+
 
 ## Sources
 - Chess Programming Wiki: Bitboards, Square Mapping Considerations.
