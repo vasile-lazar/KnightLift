@@ -123,3 +123,7 @@ bestmove a2a3
 - Speed (bench 8, 5 runs each, alternating, nothing else running): 4g median 1761 ms (about 7.06 Mnps), single pass median 1802 ms (about 6.9 Mnps). Single pass about 2.3% slower, batches do not overlap.
 - Conclusion: the repeated piece_attacks call is not the eval bottleneck; refactor not merged. Next: measure the eval in isolation before optimising anything else.
 
+### bench eval (Release, GCC, i5-14400F), main after 4g
+- 2,000,000 evals: 146 ms = 73 ns/eval; 5,000,000 evals: 363 ms = 72 ns/eval.
+- Checksum per round (10 bench FENs): 435 (fingerprint of the current eval; must stay 435 for any behaviour-preserving refactor).
+- Search at the same build: about 7.06 Mnps = about 143 ns/node, so the eval is roughly 40-50% of node time (microbench is hot-cache and likely understates).
