@@ -9,9 +9,9 @@
 3. KnightLift Chess Engine
    3.1 Reprezentarea tablei și generarea mutărilor   <- stage 1 (done)
    3.2 Protocolul UCI                                <- stage 2 (done)
-   3.3 Căutarea
-   3.4 Evaluarea
-   3.5 Rețea neuronală NNUE (antrenare, inferență)
+   3.3 Căutarea                                      <- stage 3 (done)
+   3.4 Evaluarea                                     <- stage 4 ()
+   3.5 Rețea neuronală NNUE (antrenare, inferență)   <- stage 5 ()
 4. Infrastructura de testare (perft, SPRT, CI)
 5. Aplicația web (arhitectură, backend, frontend)
 6. Rezultate experimentale
