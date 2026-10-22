@@ -485,6 +485,17 @@ namespace {
         a.set_from_fen("4k3/8/8/8/8/8/1P1P4/2B1K3 w - - 0 1");
         b.set_from_fen("4k3/8/8/8/8/8/P5P1/2B1K3 w - - 0 1");
         check(evaluate(b) > evaluate(a) + 25, "eval: bishop mobility");
+
+        // King safety: a full shield beats a thin one; an empty enemy side has no safety terms.
+        a.set_from_fen("6k1/8/8/8/8/8/5PPP/6K1 w - - 0 1");
+        b.set_from_fen("6k1/8/8/8/8/8/6P1/6K1 w - - 0 1");
+        check(king_safety(a, Color::White) > king_safety(b, Color::White), "eval: pawn shield");
+        check(king_safety(a, Color::Black) == 0, "eval: bare king, no attackers, no shield");
+
+        // Two attackers (queen g3, rook f8) on the zone cost safety; one attacker costs nothing.
+        a.set_from_fen("5rk1/8/8/8/8/6q1/5PPP/6K1 w - - 0 1");
+        b.set_from_fen("5rk1/8/8/8/8/8/5PPP/6K1 w - - 0 1");
+        check(king_safety(a, Color::White) < king_safety(b, Color::White), "eval: king zone attackers");
     }
 
     void test_tt() {

@@ -91,6 +91,7 @@ bestmove a2a3
 5a: 6,178,242 nodes in 0.5 seconds
 5b: 5,630,863 nodes in 0.5 seconds
 5c: 6,106,503 nodes in 0.6 seconds
+5d: 5,970,017 nodes in 0.77 seconds
 
 | 	            | history off         | 	history on          |
 |--------------|---------------------|----------------------|
