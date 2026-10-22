@@ -335,7 +335,16 @@ which alternatives existed, and why.
 - Rejected for now: a pawn hash table (next step, needs a pawn key), lazy eval cutoffs (changes the eval, needs an Elo match).
 - Measurement: bench 8 total nodes (12,431,983) and every per-position line must be identical to 4g; `bench eval` checksum per round must stay 435; then compare ns/eval (72) and bench 8 time (about 1761 ms).
 
-
+## 5e-1: Evaluation coefficient trace
+- Tuning needs the eval as a function of its parameters. `evaluate` stays the fast engine path (constexpr tables, incremental PST). A second function, `eval_trace(pos)`, walks the same terms and records, for every parameter, an integer coefficient (White count minus Black count) instead of a score.
+- Parameters are (middlegame, endgame) pairs sharing one coefficient: material (5), PST (6 x 64), doubled, isolated, passed (8 relative ranks), mobility weight (4: N B R Q), pawn shield near and far (mg only). 405 pairs, 810 numbers.
+- A position's score is then `((constMg + sum c_i * mg_i) * phase + (sum c_i * eg_i) * (24 - phase)) / 24`, with the same integer division as `evaluate`. The king attack penalty is nonlinear (quadratic with a cap), so it is not tuned in this round: its White-minus-Black value is stored as `constMg`.
+- Mobility baselines stay fixed constants, so `w * (n - base)` is linear in w with coefficient `n - base`.
+- `eval_from_params(trace, params, side)` reproduces the engine score from a parameter array; `current_params()` builds the array from the engine's constants.
+- Test: for every node of a depth-2 walk of the perft positions, `eval_from_params(eval_trace(pos), current_params(), side) == evaluate(pos)`. This catches any divergence between the trace and the real eval, and must be rerun after every eval change.
+- King shield and attack penalty were split into shared helpers (`shield_counts`, `attack_penalty`) so the engine path and the trace path use the same code for those terms.
+- Rejected: templating `evaluate` itself on a trace type (touches the hot path, harder to read), tuning through repeated `evaluate` calls with modified tables (the tables are constexpr and the PST sums are incremental), tuning the king attack penalty now (needs a table form first, later step).
+- Measurement: no behaviour change; `bench 8` nodes (12,431,983) and `bench eval` checksum per round (435) must stay identical, ns/eval within noise of 51.
 
 
 

@@ -1,6 +1,5 @@
 #include <chrono>
 #include <cstddef>
-#include <cstdint>
 #include <iostream>
 #include <string>
 #include <string_view>
@@ -18,6 +17,8 @@
 #include "../engine/src/position.hpp"
 #include "../engine/src/uci.hpp"
 #include "../engine/src/search.hpp"
+#include "../engine/src/eval_params.hpp"
+
 using namespace KnightLift;
 
 namespace {
@@ -419,8 +420,9 @@ namespace {
         // Castling: swap case, keep canonical KQkq order.
         std::string castling;
         for (const char ch: std::string("KQkq")) {
-            const char orig = std::isupper(static_cast<unsigned char>(ch)) ? static_cast<char>(std::tolower(ch))
-                                                                           : static_cast<char>(std::toupper(ch));
+            const char orig = std::isupper(static_cast<unsigned char>(ch))
+                                  ? static_cast<char>(std::tolower(ch))
+                                  : static_cast<char>(std::toupper(ch));
             if (f[2].find(orig) != std::string::npos) castling += ch;
         }
         if (castling.empty()) castling = "-";
@@ -464,7 +466,7 @@ namespace {
         check(evaluate(b) > evaluate(a), "eval: endgame pawn advancement");
 
         // Incremental PST/phase: a position reached by moves evaluates like the same FEN.
-        const std::pair<std::string_view, std::vector<const char *>> lines[] = {
+        const std::pair<std::string_view, std::vector<const char *> > lines[] = {
             {kStartFen, {"e2e4", "e7e5", "g1f3", "b8c6", "f1c4", "g8f6", "e1g1", "f6e4", "f1e1", "d7d5"}},
             {"8/P7/8/8/8/8/8/k6K w - - 0 1", {"a7a8q"}},
             {"4k3/8/8/3pP3/8/8/8/4K3 w - d6 0 1", {"e5d6"}},
@@ -548,7 +550,39 @@ namespace {
         check(!tt.probe(k, e), "tt: clear empties the table");
     }
 
-        void test_draws() {
+    bool trace_walk(Position &pos, const ParamArray &params, int depth) {
+        if (eval_from_params(eval_trace(pos), params, pos.side_to_move()) != evaluate(pos)) return false;
+        if (depth == 0) return true;
+
+        MoveList list;
+        generate_legal(pos, list);
+        for (const Move m: list) {
+            pos.make_move(m);
+            const bool ok = trace_walk(pos, params, depth - 1);
+            pos.unmake_move(m);
+            if (!ok) return false;
+        }
+        return true;
+    }
+
+    void test_eval_trace() {
+        const ParamArray params = current_params();
+        Position pos;
+        for (const PerftCase &c: kPerftCases) {
+            pos.set_from_fen(c.fen);
+            check(trace_walk(pos, params, 2), "eval trace equals evaluate: " + std::string(c.name));
+        }
+
+        // The trace really depends on the parameters: a changed queen value changes the score.
+        pos.set_from_fen("4k3/8/8/8/8/8/8/3QK3 w - - 0 1");
+        ParamArray changed = params;
+        changed[EvalParams::kIdxMaterial + 4].mg += 100;
+        changed[EvalParams::kIdxMaterial + 4].eg += 100;
+        check(eval_from_params(eval_trace(pos), changed, Color::White) ==
+              evaluate(pos) + 100, "eval trace: parameter change moves the score");
+    }
+
+    void test_draws() {
         Position p;
 
         // Repetition: knight shuffle returns to the start position after 4 plies.
@@ -610,6 +644,7 @@ int main() {
     test_perft();
     test_zobrist();
     test_eval();
+    test_eval_trace();
     test_uci();
     test_search();
     test_alphabeta();

@@ -5,6 +5,7 @@
 #include "eval.hpp"
 #include "attacks.hpp"
 #include "eval_tables.hpp"
+#include "eval_params.hpp"
 
 namespace KnightLift {
     namespace {
@@ -128,49 +129,53 @@ namespace KnightLift {
                 }
             }
         }
-    } // namespace
 
-    int king_safety(const Position& pos, Color c) {
-        const Square ks = pos.king_square(c);
-        int score = 0;
+        // Own pawns on the three files around the king, one and two ranks in front of it.
+        void shield_counts(const Position &pos, Color c, int &nearCount, int &farCount) {
+            const Square ks = pos.king_square(c);
+            const int f = std::clamp(static_cast<int>(to_index(file_of(ks))), 1, 6);
+            const Bitboard files = file_bb(static_cast<File>(f - 1)) | file_bb(static_cast<File>(f)) |
+                                   file_bb(static_cast<File>(f + 1));
+            const Bitboard pawns = pos.pieces(c, PieceType::Pawn) & files;
+            const int r = static_cast<int>(to_index(rank_of(ks)));
+            const int dir = (c == Color::White) ? 1 : -1;
 
-        // Pawn shield: three files centred on the king (file clamped to B..G).
-        const int f = std::clamp(static_cast<int>(to_index(file_of(ks))), 1, 6);
-        const Bitboard files = file_bb(static_cast<File>(f - 1)) | file_bb(static_cast<File>(f)) |
-                               file_bb(static_cast<File>(f + 1));
-        const Bitboard pawns = pos.pieces(c, PieceType::Pawn) & files;
-        const int r = static_cast<int>(to_index(rank_of(ks)));
-        const int dir = (c == Color::White) ? 1 : -1;
-
-        const int r1 = r + dir;
-        if (r1 >= 0 && r1 <= 7) {
-            score += EvalTables::kShieldNear * popcount(pawns & rank_bb(static_cast<Rank>(r1)));
-        }
-        const int r2 = r + 2 * dir;
-        if (r2 >= 0 && r2 <= 7) {
-            score += EvalTables::kShieldFar * popcount(pawns & rank_bb(static_cast<Rank>(r2)));
+            nearCount = 0;
+            farCount = 0;
+            const int r1 = r + dir;
+            if (r1 >= 0 && r1 <= 7) nearCount = popcount(pawns & rank_bb(static_cast<Rank>(r1)));
+            const int r2 = r + 2 * dir;
+            if (r2 >= 0 && r2 <= 7) farCount = popcount(pawns & rank_bb(static_cast<Rank>(r2)));
         }
 
-        // Attackers of the king zone.
-        const Bitboard zone = king_attacks(ks) | square_bb(ks);
-        const Bitboard occ = pos.occupied();
-        int attackers = 0;
-        int units = 0;
-        for (std::size_t t = to_index(PieceType::Knight); t <= to_index(PieceType::Queen); ++t) {
-            const PieceType pt = static_cast<PieceType>(t);
-            Bitboard bb = pos.pieces(~c, pt);
-            while (bb) {
-                const Square s = pop_lsb(bb);
-                if (piece_attacks(pt, s, occ) & zone) {
-                    ++attackers;
-                    units += EvalTables::kAttackWeight[t];
+        // Non-negative penalty for enemy pieces attacking the king zone.
+        int attack_penalty(const Position &pos, Color c) {
+            const Square ks = pos.king_square(c);
+            const Bitboard zone = king_attacks(ks) | square_bb(ks);
+            const Bitboard occ = pos.occupied();
+            int attackers = 0;
+            int units = 0;
+            for (std::size_t t = to_index(PieceType::Knight); t <= to_index(PieceType::Queen); ++t) {
+                const PieceType pt = static_cast<PieceType>(t);
+                Bitboard bb = pos.pieces(~c, pt);
+                while (bb) {
+                    const Square s = pop_lsb(bb);
+                    if (piece_attacks(pt, s, occ) & zone) {
+                        ++attackers;
+                        units += EvalTables::kAttackWeight[t];
+                    }
                 }
             }
+            return attackers >= 2 ? std::min(units * units / 2, EvalTables::kAttackCap) : 0;
         }
-        if (attackers >= 2) {
-            score -= std::min(units * units / 2, EvalTables::kAttackCap);
-        }
-        return score;
+    } // namespace
+
+    int king_safety(const Position &pos, Color c) {
+        int nearCount = 0;
+        int farCount = 0;
+        shield_counts(pos, c, nearCount, farCount);
+        return EvalTables::kShieldNear * nearCount + EvalTables::kShieldFar * farCount -
+               attack_penalty(pos, c);
     }
 
     int evaluate(const Position &pos) {
@@ -190,5 +195,102 @@ namespace KnightLift {
         const int egScore = pos.psq_eg() + eg[0] - eg[1];
         const int score = (mgScore * phase + egScore * (maxPhase - phase)) / maxPhase;
         return pos.side_to_move() == Color::White ? score : -score;
+    }
+
+        ParamArray current_params() {
+        using namespace EvalParams;
+        ParamArray p{};
+        for (std::size_t t = 0; t < kMaterial; ++t) {
+            p[kIdxMaterial + t] = {EvalTables::kMgValue[t], EvalTables::kEgValue[t]};
+        }
+        for (std::size_t t = 0; t < kNumPieceTypes; ++t) {
+            for (std::size_t s = 0; s < kNumSquares; ++s) {
+                p[kIdxPst + t * kNumSquares + s] = {EvalTables::kMgPst[t][s], EvalTables::kEgPst[t][s]};
+            }
+        }
+        p[kIdxDoubled] = {kDoubledMg, kDoubledEg};
+        p[kIdxIsolated] = {kIsolatedMg, kIsolatedEg};
+        for (std::size_t r = 0; r < 8; ++r) p[kIdxPassed + r] = {kPassedMg[r], kPassedEg[r]};
+        for (std::size_t i = 0; i < 4; ++i) {
+            p[kIdxMobility + i] = {kMobility[i + 1].mg, kMobility[i + 1].eg};
+        }
+        p[kIdxShieldNear] = {EvalTables::kShieldNear, 0};
+        p[kIdxShieldFar] = {EvalTables::kShieldFar, 0};
+        return p;
+    }
+
+    EvalTrace eval_trace(const Position &pos) {
+        using namespace EvalParams;
+        EvalTrace tr;
+        tr.phase = std::min(pos.phase(), EvalTables::kMaxPhase);
+        const Bitboard occ = pos.occupied();
+
+        for (std::size_t c = 0; c < kNumColors; ++c) {
+            const Color color = static_cast<Color>(c);
+            const int sign = (color == Color::White) ? 1 : -1;
+
+            // Material and PST (same mirror as the engine tables: White uses sq ^ 56).
+            for (std::size_t t = 0; t < kNumPieceTypes; ++t) {
+                Bitboard bb = pos.pieces(color, static_cast<PieceType>(t));
+                while (bb) {
+                    const std::size_t sq = to_index(pop_lsb(bb));
+                    const std::size_t idx = (color == Color::White) ? (sq ^ 56) : sq;
+                    tr.coef[kIdxPst + t * kNumSquares + idx] += sign;
+                    if (t < kMaterial) tr.coef[kIdxMaterial + t] += sign;
+                }
+            }
+
+            // Pawn structure.
+            const Bitboard own = pos.pieces(color, PieceType::Pawn);
+            const Bitboard enemy = pos.pieces(~color, PieceType::Pawn);
+            for (std::size_t f = 0; f < 8; ++f) {
+                const int n = popcount(own & file_bb(static_cast<File>(f)));
+                if (n > 1) tr.coef[kIdxDoubled] += sign * (n - 1);
+            }
+            Bitboard pb = own;
+            while (pb) {
+                const Square s = pop_lsb(pb);
+                if (!(own & kAdjacentFiles[to_index(file_of(s))])) tr.coef[kIdxIsolated] += sign;
+                if (!(enemy & kPassedMask[to_index(color)][to_index(s)])) {
+                    const std::size_t r = to_index(rank_of(s));
+                    tr.coef[kIdxPassed + (color == Color::White ? r : 7 - r)] += sign;
+                }
+            }
+
+            // Mobility.
+            const Bitboard area =
+                    ~(pos.pieces(color) | pawn_attacks_bb(~color, pos.pieces(~color, PieceType::Pawn)));
+            for (std::size_t t = to_index(PieceType::Knight); t <= to_index(PieceType::Queen); ++t) {
+                const PieceType pt = static_cast<PieceType>(t);
+                Bitboard bb = pos.pieces(color, pt);
+                while (bb) {
+                    const Square s = pop_lsb(bb);
+                    const int n = popcount(piece_attacks(pt, s, occ) & area);
+                    tr.coef[kIdxMobility + t - to_index(PieceType::Knight)] +=
+                            sign * (n - kMobility[t].base);
+                }
+            }
+
+            // King safety: shield counts are linear; the attack penalty is a fixed offset.
+            int nearCount = 0;
+            int farCount = 0;
+            shield_counts(pos, color, nearCount, farCount);
+            tr.coef[kIdxShieldNear] += sign * nearCount;
+            tr.coef[kIdxShieldFar] += sign * farCount;
+            tr.constMg -= sign * attack_penalty(pos, color);
+        }
+        return tr;
+    }
+
+    int eval_from_params(const EvalTrace &tr, const ParamArray &p, Color sideToMove) {
+        int mg = tr.constMg;
+        int eg = 0;
+        for (std::size_t i = 0; i < EvalParams::kNumParams; ++i) {
+            mg += tr.coef[i] * p[i].mg;
+            eg += tr.coef[i] * p[i].eg;
+        }
+        const int maxPhase = EvalTables::kMaxPhase;
+        const int score = (mg * tr.phase + eg * (maxPhase - tr.phase)) / maxPhase;
+        return sideToMove == Color::White ? score : -score;
     }
 } // namespace KnightLift
