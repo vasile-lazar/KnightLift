@@ -52,6 +52,8 @@ namespace KnightLift {
         Bitboard attackers_to(Square s, Bitboard occupied) const;  // pieces of both colors
         bool is_attacked(Square s, Color by) const;
         bool in_check() const { return is_attacked(king_square(sideToMove_), ~sideToMove_); }
+        bool is_repetition(int ply) const;   // ply = plies since the search root
+        bool insufficient_material() const;  // K vs K, K+minor vs K
         Piece piece_on(Square s) const { return board_[to_index(s)]; }
         void make_move(Move m);
         void make_null_move();
