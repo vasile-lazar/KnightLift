@@ -498,6 +498,29 @@ namespace {
         check(king_safety(a, Color::White) < king_safety(b, Color::White), "eval: king zone attackers");
     }
 
+    bool eval_walk(Position &pos, int depth) {
+        if (evaluate(pos) != evaluate_reference(pos)) return false;
+        if (depth == 0) return true;
+
+        MoveList list;
+        generate_legal(pos, list);
+        for (const Move m: list) {
+            pos.make_move(m);
+            const bool ok = eval_walk(pos, depth - 1);
+            pos.unmake_move(m);
+            if (!ok) return false;
+        }
+        return true;
+    }
+
+    void test_eval_single_pass() {
+        Position pos;
+        for (const PerftCase &c: kPerftCases) {
+            pos.set_from_fen(c.fen);
+            check(eval_walk(pos, 2), "eval: single pass equals reference: " + std::string(c.name));
+        }
+    }
+
     void test_tt() {
         TranspositionTable tt(1);
         TTEntry e;
@@ -592,6 +615,7 @@ int main() {
     test_perft();
     test_zobrist();
     test_eval();
+    test_eval_single_pass();
     test_uci();
     test_search();
     test_alphabeta();

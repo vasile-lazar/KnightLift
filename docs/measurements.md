@@ -122,3 +122,9 @@ bestmove a2a3
 - Result (4g first): 140-113-247 in 500 games, Elo +18.8 +/- 21.7, LOS 95.5%. 6 unfinished games discarded. SPRT elo0=0 elo1=10: LLR 1.13, no bound reached.
 - Draws: 3-fold repetition 227/500 (45%, was 259/485 = 53% in 5d vs 5c), fifty-move 3, insufficient material 16, stalemate 1. Draw ratio 49.4% (was 55.1%).
 - Conclusion: draw detection works as designed and probably gains a little Elo. Remaining repetition draws are mostly correct (eval about 0); contempt is the next lever, after 5e.
+
+### Single-pass eval (branch perf-eval-single-pass, not merged)
+- Goal: recover the nps lost to 5d by computing each attack bitboard once for mobility and king zone.
+- Correctness: bench 8 total nodes 12,431,983 and every per-position line identical to 4g; new equivalence test passes.
+- Speed (bench 8, 5 runs each, alternating, nothing else running): 4g median 1761 ms (about 7.06 Mnps), single pass median 1802 ms (about 6.9 Mnps). Single pass about 2.3% slower, batches do not overlap.
+- Conclusion: the repeated piece_attacks call is not the eval bottleneck; refactor not merged. Next: measure the eval in isolation before optimising anything else.

@@ -10,4 +10,6 @@ namespace KnightLift {
     // Middlegame-only king safety term for color c (positive = safe). Exposed for tests.
     int king_safety(const Position& pos, Color c);
 
+    // Straightforward unoptimised evaluation, kept to test evaluate() against.
+    int evaluate_reference(const Position& pos);
 }  // namespace KnightLift
