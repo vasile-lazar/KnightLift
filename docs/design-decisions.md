@@ -364,6 +364,17 @@ which alternatives existed, and why.
 - Decision: values not merged; the trace, data script and tuner remain. Raw output kept in `docs/tuning/5e-round1.txt`.
 - Next: labels from Stockfish evaluations (Lichess evaluation database), with a quiescence-based quiet filter, instead of game results.
 
+## 5e-5: Stockfish-labelled tuning data
+- Round 1 used game results as labels and did not improve the eval at equal depth (fixed depth 7: +3.5 +/- 25.3 Elo). Round 2 uses Stockfish evaluations from the Lichess evaluation database (394,669,566 positions, one JSON line each: FEN without clocks and a list of evaluations with depth and principal variations with cp or mate).
+- A Python script (`tools/evals_to_positions.py`) streams the compressed file without unpacking it, samples positions at random (default 2%), keeps only positions whose deepest evaluation has depth >= 20 and is a centipawn score with |cp| <= 1000, and writes `<FEN>;<cp>` lines. Every 20th kept position goes to the validation file.
+- The tuner gets a `--label cp` mode: target = sigmoid(K * cp), prediction = sigmoid(K * engine score), loss = mean squared difference. K is fixed (default 0.00368, the scale Lichess uses to turn cp into winning chances) because fitting K here is degenerate: K -> 0 makes both sides 0.5 and the loss vanishes.
+- Point of view: it is not certain whether `cp` is stored from White's or the side to move's view, so the tuner computes the correlation between the engine's static score and the label under both conventions on the first 20,000 quiet positions and uses the better one. It prints both values.
+- Quiet filter: skip positions where the side to move is in check, and positions where the quiescence search score differs from the static eval by more than 10 cp (a pending capture sequence the static eval cannot see). `quiescence_score(Position&)` is added to the search API for this.
+- Known limitations: positions come from Lichess analysis boards (human game positions, not engine games), Stockfish evaluates with its own assumptions, and the split between train and validation is by position (near-duplicates from one game can leak).
+- Rejected for now: mixing game results into the label (NNUE-style blend, later), regularisation toward the old values (only if the result drifts), a second move-ordering-aware filter.
+- Measurement: correlation printed by the tuner (expected clearly positive for the right convention), validation loss before and after, then a fixed-depth match against `knightlift_pre5e.exe`, and bench 7 nodes to watch the tree size.
+
+
 
 ## Sources
 - Chess Programming Wiki: Bitboards, Square Mapping Considerations.
