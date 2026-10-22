@@ -166,3 +166,7 @@ bestmove a2a3
 - Bench 7: pre5e 5,969,646 nodes (739 ms), 5e 7,562,799 (1,005 ms). Bench 8: 12,431,983 vs 18,867,033. Tree growth about 1.3 to 1.5x, nps about -7%.
 - Next: fixed-depth match (depth 7, no SPRT) to separate eval quality from speed.
 
+### 5e vs pre5e, fixed depth (cutechess-cli, tc=inf depth=7, Hash 16, 8moves_v3, -repeat, 6 games in parallel, no SPRT)
+- 5e first: 112-108-180 in 400 games, Elo +3.5 +/- 25.3, LOS 60.6%, draw ratio 45% (168 repetition, 7 fifty-move, 5 insufficient material).
+- Timed match for comparison: 59-81-45 at 185 games (about -41 +/- 44), stopped manually.
+
