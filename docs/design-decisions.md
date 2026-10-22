@@ -357,5 +357,27 @@ which alternatives existed, and why.
 - Rejected for now: engine-based quiet filter (static eval against quiescence score, a possible refinement in 5e-3), Stockfish-labelled data (not needed for Texel; relevant for NNUE in stage 7), self-play data (slow and weak at this stage).
 - Measurement: the script prints games read, games used, positions per file and the result distribution; spot-check ten positions in the engine with `position fen ...` and `d`. The final value of the data is measured only by the Elo match after tuning (5e-4).
 
+## 5e-3: Texel tuner
+- A C++ tool (`knightlift_tune`, `tools/tune.cpp`) reads the `FEN;result` files, builds `eval_trace` for each position, and stores the result compactly: per position a sparse list of (parameter index, integer coefficient), the phase, the fixed `constMg` and the label. About 45 entries per position, so about 2 to 3 GB for 9.5 million positions.
+- Model: White-point-of-view score `s = ((constMg + sum c_i mg_i) * phase + (sum c_i eg_i) * (24 - phase)) / 24`, predicted result `p = 1 / (1 + exp(-K s))`, loss = mean squared error against the game result (1, 0.5, 0).
+- K is fitted once on the starting parameters by golden-section search and then kept fixed. With K fixed the overall scale of the eval is not a free direction.
+- Optimiser: full-batch Adam (beta 0.9 / 0.999) on the 810 weights (mg and eg per parameter), learning rate in centipawns per step with a cosine decay to 10%, gradient computed multithreaded with a per-thread buffer.
+- The pawn shield endgame values are frozen at 0 (the term is middlegame-only by design). Parameters that never occur (pawn PST on ranks 1 and 8, passed pawn rank 0 and 7) have a zero gradient and stay unchanged.
+- Validation loss on the held-out games is computed every 10 epochs; the weights with the best validation loss are written out, so overfitting cannot make the result worse than the best seen.
+- Output: a text file with K, the initial and final losses, and ready-to-paste C++ blocks (material, PST tables, pawn terms, mobility weights, shield) rounded to integers.
+- Startup self-check: for the first 2000 positions the compressed dataset score must match `eval_from_params` within 1 cp, which catches errors in the sparse storage.
+- Rejected for now: tuning the king attack penalty and the mobility baselines (nonlinear or structural changes, later), regularisation toward the old values (add only if drift looks wrong), mini-batches (full batch is fast enough: about 0.5 s per epoch with 16 threads).
+- Measurement: the loss on the validation set before and after, then the Elo match in 5e-4. Lower loss is a hint, the Elo match decides.
+
+## 5e-4: Tuned parameters (round 1)
+- All 405 parameter pairs except the fixed ones were replaced by the Texel result of 5e-3 (9.5 million training positions from Lichess Elite 2020-09 to 2020-12, validation loss 0.18939 -> 0.18547, K = 0.00541). The raw output is kept in `docs/tuning/5e-round1.txt`.
+- Notable changes: pawn shield 10/5 -> 19/15, mobility weights up (knight 4/4 -> 6/14), passed pawn endgame bonus now monotone in rank (3, 11, 42, 62, 98, 99), isolated pawns -10/-15 -> -15/-21, doubled -10/-20 -> -17/-15; kings in the centre are penalised much more in the middlegame PST.
+- Unchanged: the king attack penalty formula, the mobility baselines, the phase weights, the shield endgame values (0).
+- Known limitations: the labels come from human blitz games, rare squares carry noise (no regularisation), and the parameters are tuned against the old eval structure only.
+- Test effect: the isolated pawn test compared an exact value (30); it now checks a lower bound.
+- Measurement: Elo against the pre-tuning build (`knightlift_pre5e.exe`, bench 8 nodes 12,431,983), cutechess-cli, new version first, tc 8+0.08, SPRT elo0=0 elo1=10. Bench nodes change by design; `bench eval` ns/eval should stay near 51.
+
+
+
 ## Sources
 - Chess Programming Wiki: Bitboards, Square Mapping Considerations.

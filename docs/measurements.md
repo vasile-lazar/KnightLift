@@ -93,7 +93,7 @@ bestmove a2a3
 5c: 6,106,503 nodes in 0.6 seconds
 5d: 5,970,017 nodes in 0.77 seconds
 4g: 5,969,646 nodes in 0.92 seconds
-
+5e: 18,867,033 nodes in 2.66 seconds
 
 | 	            | history off         | 	history on          |
 |--------------|---------------------|----------------------|
@@ -154,5 +154,11 @@ bestmove a2a3
 - Total: 1,330,542 games used, 9,542,340 train positions, 1,057,076 val positions.
 - Result share (White POV): win 0.47, draw 0.114, loss 0.416 in every month.
 - About 78% of games passed the filters (the rest were non-Normal terminations or too short).
+
+### 5e-3 Texel tuning run (tools/tune.cpp, 16 threads)
+- Data: 9,542,340 train and 1,057,076 val positions (Lichess Elite 2020-09..12). 300 epochs, Adam, lr 1.0 with cosine decay to 10%.
+- K = 0.00540615.
+- Loss: train 0.189476 -> 0.185407, val 0.189389 -> 0.185470. A constant predictor scores about 0.221, so the eval's explained variance went from about 14.2% to 16.0%.
+- No overfitting (train/val gap < 0.0001); about 95% of the gain in the first 100 epochs. Output file: tuned_5e.txt.
 
 

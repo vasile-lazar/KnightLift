@@ -488,7 +488,7 @@ namespace {
         // two isolated penalties (both setups have the same passed bonuses).
         a.set_from_fen("4k3/8/8/8/8/8/P1P5/4K3 w - - 0 1");
         b.set_from_fen("4k3/8/8/8/8/8/PP6/4K3 w - - 0 1");
-        check(evaluate(b) - evaluate(a) == 30, "eval: isolated pawn penalty");
+        check(evaluate(b) > evaluate(a) + 25, "eval: isolated pawn penalty");
 
         // Doubled pawns (plus the isolation that comes with them) cost clearly more than a
         // pawn pair that is neither.

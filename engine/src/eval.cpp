@@ -9,14 +9,13 @@
 
 namespace KnightLift {
     namespace {
-
         // ---- Pawn structure (5b) ------------------------------------------------
 
-        constexpr int kDoubledMg = -10, kDoubledEg = -20;
-        constexpr int kIsolatedMg = -10, kIsolatedEg = -15;
+        constexpr int kDoubledMg = -17, kDoubledEg = -15;
+        constexpr int kIsolatedMg = -15, kIsolatedEg = -21;
         // Indexed by rank from the pawn owner's point of view (0 = own back rank).
-        constexpr std::array<int, 8> kPassedMg = {0, 5, 5, 10, 20, 35, 60, 0};
-        constexpr std::array<int, 8> kPassedEg = {0, 10, 15, 25, 45, 80, 120, 0};
+        constexpr std::array<int, 8> kPassedMg = {0, -1, -6, 0, 19, 16, 15, 0};
+        constexpr std::array<int, 8> kPassedEg = {0, 3, 11, 42, 62, 98, 99, 0};
 
         constexpr Bitboard adjacent_files(File f) {
             const Bitboard b = file_bb(f);
@@ -83,7 +82,7 @@ namespace KnightLift {
             }
         }
 
-                // ---- Mobility (5c) ------------------------------------------------------
+        // ---- Mobility (5c) ------------------------------------------------------
 
         struct MobilityParams {
             int base;
@@ -92,14 +91,16 @@ namespace KnightLift {
         };
 
         // Indexed by PieceType; pawn and king unused.
-        constexpr std::array<MobilityParams, kNumPieceTypes> kMobility = {{
-            {0, 0, 0},    // Pawn
-            {4, 4, 4},    // Knight
-            {6, 5, 5},    // Bishop
-            {6, 2, 4},    // Rook
-            {13, 1, 2},   // Queen
-            {0, 0, 0},    // King
-        }};
+        constexpr std::array<MobilityParams, kNumPieceTypes> kMobility = {
+            {
+                {0, 0, 0}, // Pawn
+                {4, 6, 14}, // Knight
+                {6, 8, 9}, // Bishop
+                {6, 7, 6}, // Rook
+                {13, 4, 6}, // Queen
+                {0, 0, 0}, // King
+            }
+        };
 
         constexpr Bitboard pawn_attacks_bb(Color c, Bitboard pawns) {
             if (c == Color::White) {
@@ -114,7 +115,7 @@ namespace KnightLift {
         static_assert(pawn_attacks_bb(Color::Black, square_bb(Square::H7)) == square_bb(Square::G6));
         static_assert(pawn_attacks_bb(Color::Black, square_bb(Square::A7)) == square_bb(Square::B6));
 
-        void mobility(const Position& pos, Color c, int& mg, int& eg) {
+        void mobility(const Position &pos, Color c, int &mg, int &eg) {
             const Bitboard occ = pos.occupied();
             const Bitboard area = ~(pos.pieces(c) | pawn_attacks_bb(~c, pos.pieces(~c, PieceType::Pawn)));
 
@@ -197,7 +198,7 @@ namespace KnightLift {
         return pos.side_to_move() == Color::White ? score : -score;
     }
 
-        ParamArray current_params() {
+    ParamArray current_params() {
         using namespace EvalParams;
         ParamArray p{};
         for (std::size_t t = 0; t < kMaterial; ++t) {
