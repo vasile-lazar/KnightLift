@@ -352,6 +352,11 @@ namespace KnightLift {
         return searcher.search_root(depth < 1 ? 1 : depth, Move::none(), useAlphaBeta);
     }
 
+    int quiescence_score(Position &pos) {
+        Searcher searcher(pos, nullptr, nullptr);
+        return searcher.quiescence(-kInfinity, kInfinity, true);
+    }
+    
     SearchResult search_iterative(Position &pos, const SearchLimits &limits,
                                   const std::atomic<bool> &stop, const InfoCallback &onInfo) {
         Searcher searcher(pos, &limits, &stop, &gTT);

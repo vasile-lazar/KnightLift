@@ -53,6 +53,9 @@ namespace KnightLift
     void tt_resize(std::size_t megabytes);
     void tt_clear();
     int tt_hashfull();
-
+    // Quiescence search with a full window, from the side to move's point of view.
+    // Used by the tuner's quiet-position filter.
+    int quiescence_score(Position &pos);
+    
     void set_null_move(bool enabled);
 } // namespace KnightLift

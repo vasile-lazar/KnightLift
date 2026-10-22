@@ -359,6 +359,11 @@ namespace {
         pos.set_from_fen("4k3/8/2p5/3p4/8/8/8/3QK3 w - - 0 1");
         r = search(pos, 1);
         check(move_to_uci(r.best) != "d1d5", "quiescence avoids a poisoned pawn");
+
+        pos.set_from_fen(kStartFen);
+        check(quiescence_score(pos) == evaluate(pos), "quiescence score equals static eval when quiet");
+        pos.set_from_fen("4k3/8/8/3q4/8/8/8/3QK3 w - - 0 1");
+        check(quiescence_score(pos) > evaluate(pos) + 500, "quiescence score sees a free queen");
     }
 
     void test_alphabeta() {
