@@ -2,6 +2,7 @@
 #include <sstream>
 #include <system_error>
 #include <cassert>
+#include <algorithm>
 
 #include "position.hpp"
 #include "attacks.hpp"
@@ -375,6 +376,28 @@ namespace KnightLift {
         epSquare_ = st.epSquare;
         halfmoveClock_ = st.halfmoveClock;
         key_ = st.key;
+    }
+
+    // A position d plies ago equals the current one (d even, >= 4). A repeat inside the
+    // search tree (d <= ply) counts at once; repeats that reach before the root need two
+    // earlier occurrences (threefold). Only the last halfmoveClock_ plies can repeat.
+    bool Position::is_repetition(int ply) const {
+        const int limit = std::min(halfmoveClock_, static_cast<int>(historyPly_));
+        int count = 0;
+        for (int d = 4; d <= limit; d += 2) {
+            if (history_[historyPly_ - static_cast<std::size_t>(d)].key == key_) {
+                if (d <= ply) return true;
+                if (++count >= 2) return true;
+            }
+        }
+        return false;
+    }
+
+    bool Position::insufficient_material() const {
+        if ((pieces(PieceType::Pawn) | pieces(PieceType::Rook) | pieces(PieceType::Queen)) != 0) {
+            return false;
+        }
+        return popcount(pieces(PieceType::Knight) | pieces(PieceType::Bishop)) <= 1;
     }
 
     bool Position::consistent() const {

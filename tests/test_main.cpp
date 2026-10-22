@@ -529,6 +529,57 @@ namespace {
         tt.clear();
         check(!tt.probe(k, e), "tt: clear empties the table");
     }
+
+        void test_draws() {
+        Position p;
+
+        // Repetition: knight shuffle returns to the start position after 4 plies.
+        p.set_from_fen(kStartFen);
+        check(!p.is_repetition(10), "draw: empty history is no repetition");
+        bool ok = true;
+        for (const char *m: {"g1f3", "g8f6", "f3g1", "f6g8"}) ok = play(p, m) && ok;
+        check(ok, "draw: shuffle moves are legal");
+        check(p.is_repetition(4), "draw: repeat inside the search tree");
+        check(!p.is_repetition(0), "draw: one earlier game occurrence is not yet threefold");
+        for (const char *m: {"g1f3", "g8f6", "f3g1", "f6g8"}) ok = play(p, m) && ok;
+        check(p.is_repetition(0), "draw: threefold from game history");
+
+        // Insufficient material.
+        const std::pair<std::string_view, bool> cases[] = {
+            {"4k3/8/8/8/8/8/8/4K3 w - - 0 1", true},
+            {"4k3/8/8/8/8/8/8/3BK3 w - - 0 1", true},
+            {"4k3/8/8/8/8/8/8/3NK3 w - - 0 1", true},
+            {"4k3/8/8/8/8/8/8/2NNK3 w - - 0 1", false},
+            {"4k3/8/8/8/8/8/P7/4K3 w - - 0 1", false},
+            {"4k3/8/8/8/8/8/8/R3K3 w - - 0 1", false},
+        };
+        for (const auto &c: cases) {
+            p.set_from_fen(c.first);
+            check(p.insufficient_material() == c.second,
+                  "draw: insufficient material: " + std::string(c.first));
+        }
+
+        std::atomic<bool> stop{false};
+        SearchLimits limits;
+        limits.maxDepth = 4;
+
+        // Fifty-move rule: at 99 every quiet move reaches 100, so the score is 0; at 0 it is a win.
+        p.set_from_fen("4k3/8/8/8/8/8/8/R3K3 w - - 99 80");
+        check(search_iterative(p, limits, stop, nullptr).score == 0, "draw: fifty-move rule");
+        p.set_from_fen("4k3/8/8/8/8/8/8/R3K3 w - - 0 80");
+        check(search_iterative(p, limits, stop, nullptr).score > 300, "draw: fresh clock keeps the win");
+
+        // Black, a rook down, takes the repetition; the fixed-depth search has no draw logic.
+        p.set_from_fen("4k3/8/8/8/8/8/8/R3K3 w - - 0 1");
+        ok = true;
+        for (const char *m: {"a1a2", "e8d8", "a2a1", "d8e8", "a1a2", "e8d8", "a2a1"}) {
+            ok = play(p, m) && ok;
+        }
+        check(ok, "draw: repetition setup moves are legal");
+        const SearchResult r = search_iterative(p, limits, stop, nullptr);
+        check(move_to_uci(r.best) == "d8e8" && r.score == 0, "draw: losing side takes the repetition");
+        check(search(p, 3).score < -300, "draw: fixed-depth search ignores draws");
+    }
 } // namespace
 
 int main() {
@@ -545,6 +596,7 @@ int main() {
     test_search();
     test_alphabeta();
     test_search_iterative();
+    test_draws();
     test_tt();
 
     std::cout << (gFailures == 0 ? "ALL TESTS PASSED" : "TESTS FAILED") << '\n';

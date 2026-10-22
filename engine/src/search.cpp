@@ -159,6 +159,12 @@ namespace KnightLift {
                 ++nodes_;
                 if (checkStop_ && (nodes_ & 2047) == 0 && should_stop()) aborted_ = true;
                 if (aborted_) return 0;
+                if (drawDetect_ && ply > 0) {
+                    if (pos_.is_repetition(ply) || pos_.insufficient_material() ||
+                        (pos_.halfmove_clock() >= 100 && !pos_.in_check())) {
+                        return 0;
+                        }
+                }
                 if (depth <= 0) return quiescence(alpha, beta, true);
 
                 const int alphaOrig = alpha;
@@ -304,7 +310,7 @@ namespace KnightLift {
             }
 
             void enable_null_move(bool on) { nullMove_ = on; }
-
+            void enable_draw_detection(bool on) { drawDetect_ = on; }
         private:
             bool should_stop() const {
                 if (stop_ != nullptr && stop_->load(std::memory_order_relaxed)) return true;
@@ -333,6 +339,7 @@ namespace KnightLift {
             std::array<std::array<Move, 2>, kMaxDepth + 2> killers_{};
             std::array<HistoryTable, kNumColors> history_{};
             bool nullMove_ = false;
+            bool drawDetect_ = false;
         };
     } // namespace
 
@@ -349,6 +356,7 @@ namespace KnightLift {
                                   const std::atomic<bool> &stop, const InfoCallback &onInfo) {
         Searcher searcher(pos, &limits, &stop, &gTT);
         searcher.enable_null_move(gNullMove);
+        searcher.enable_draw_detection(true);
         SearchResult best;
 
         for (int depth = 1; depth <= limits.maxDepth && depth <= kMaxDepth; ++depth) {

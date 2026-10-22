@@ -92,6 +92,8 @@ bestmove a2a3
 5b: 5,630,863 nodes in 0.5 seconds
 5c: 6,106,503 nodes in 0.6 seconds
 5d: 5,970,017 nodes in 0.77 seconds
+4g: 5,969,646 nodes in 0.92 seconds
+
 
 | 	            | history off         | 	history on          |
 |--------------|---------------------|----------------------|
@@ -108,3 +110,9 @@ bestmove a2a3
 - Result (from 5b's side): 88-114-299 in 501 games, Elo -18.0 +/- 19.3 -> 5c about +18 +/- 19 Elo, LOS 96.6% for 5c. Draw ratio 59.7% (289 by 3-fold repetition).
 - SPRT (elo0=0, elo1=10) was oriented to 5b, so it is not a valid test of 5c; match stopped manually at 501 games, 6 unfinished games discarded. Conclusion: probable small gain from mobility with placeholder values; 5e tuning expected to improve it.
 - Intermediate snapshots for reference: 40 games 10-8-22 (5b ahead), 200 games 31-56-113 (5c ahead); early snapshots are noise.
+
+### 5d vs 5c (cutechess-cli, tc 8+0.08, Hash 16, 8moves_v3, -repeat, concurrency 6)
+- Builds: 5c bench7 = 6,106,503 nodes in 0.60 s; 5d bench7 = 5,970,017 nodes in 0.77 s (Release, GCC). nps about 25% lower in 5d.
+- Result (5d first): 109-109-267 in 485 games, Elo 0.0 +/- 20.7, LOS 50%. 6 unfinished games discarded. SPRT elo0=0 elo1=10: LLR -0.45, no bound reached.
+- 259 of 485 games were 3-fold repetition draws, which compresses decisive results (motivates 4g).
+- Conclusion: no measurable gain at initial values and about 25% eval cost; kept for 5e tuning and for the single-pass eval optimisation, which should recover the speed.

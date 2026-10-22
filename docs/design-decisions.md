@@ -304,6 +304,19 @@ which alternatives existed, and why.
 - Placeholders for 5e.
 - Elo vs 5c (cutechess-cli, new version listed first, 8moves_v3, tc 8+0.08, SPRT elo0=0 elo1=10). The expected gain is small, so let it run to a bound or at least 1000 games, and record the nps cost from bench.
 
+## 4g: Draw detection in search
+- Three draw rules are recognised inside the search (not in the static eval) and score 0:
+1. Repetition: a position that already occurred inside the current search path counts as a draw at its first repeat (twofold); a position that only repeats positions from before the root needs a third occurrence (threefold, like the real rule).
+2. Fifty-move rule: halfmove clock >= 100, unless the side to move is in check (a possible mate takes priority; the case where it is in check but not mated is rare and accepted).
+3. Insufficient material: K vs K and K+single minor vs K.
+- At node entry in `alphabeta`, before the TT probe and before quiescence, never at the root (the root must return a move). Gated by a Searcher flag enabled only in `search_iterative`, the same way as null move, so the fixed-depth `search()` and the minimax reference stay identical and the equivalence tests remain valid.
+- 289 of 501 games in the 5c vs 5b match ended by 3-fold repetition. Without repetition awareness the engine cannot avoid repeating when ahead or exploit it when behind, which also wastes eval gains and inflates the draw rate.
+- Graph-history interaction: TT entries can store a draw score that depends on the path. Standard in engines, ignored for now.
+- Repetition in `evaluate` (wrong layer, eval has no path), a repetition hash table (the State stack scan limited by the halfmove clock is cheap enough), a contempt value (later, after tuning), a UCI option to switch it off (add only if the Elo match needs an ablation).
+- Elo vs the previous build with the same eval (cutechess, new version first, tc 8+0.08, SPRT elo0=0 elo1=10). Also compare the share of "Draw by 3-fold repetition" games, which should drop clearly. Bench nodes may change slightly (draw scores prune differently).
+- 289 of 501 games in the 5c vs 5b match and 259 of 485 in 5d vs 5c ended by 3-fold repetition. Without repetition awareness the engine cannot avoid repeating when ahead or exploit it when behind, which also wastes eval gains and inflates the draw rate.
+
+
 
 
 ## Sources
