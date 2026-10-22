@@ -293,6 +293,18 @@ which alternatives existed, and why.
 - Baseline/mg/eg: N 4/4/4, B 6/5/5, R 6/2/4, Q 13/1/2. Placeholders for 5e.
 - Elo vs 5b (cutechess-cli, 8moves_v3, tc 8+0.08, SPRT elo0=0 elo1=10). Bench nodes for reference; also note bench nps, because mobility makes eval noticeably slower.
 
+## 5d: King safety
+- Two middlegame-only terms, computed per side by `king_safety(pos, color)`:
+1. Pawn shield: friendly pawns on the king's file and its two neighbours (file clamped to B..G so a corner king uses B-D / E-G... three files), +10 per pawn on the rank directly in front of the king, +5 per pawn two ranks in front.
+2. King-zone attackers: the zone is the king square plus the squares it attacks. Each enemy N/B/R/Q attacking at least one zone square counts as an attacker with a weight (N2 B2 R3 Q5). With two or more attackers, penalty = min(units^2 / 2, 250), where units is the weight sum.
+- King safety matters while queens and rooks are on the board. Adding it to the mg sum only lets the tapered eval fade it out with the phase, so no separate phase logic is needed.
+- A single piece rarely mates; danger grows faster than linearly with the number of attackers. This is the standard shape (Stockfish/Crafty style), simplified to a formula instead of a table so 5e can replace it by a tuned table.
+- `king_safety` is declared in eval.hpp so tests can check it directly, because the shield and attacker terms are too small to isolate through full `evaluate` (PSTs and mobility change with every piece move).
+- Pawn storm terms, open/semi-open file penalties next to the king, safe-check detection, attacker counts weighted by attacked zone squares (all postponed; each needs separate measurement). A single combined pass with mobility to avoid computing piece attacks twice (premature; speed work after the terms are settled).
+- Placeholders for 5e.
+- Elo vs 5c (cutechess-cli, new version listed first, 8moves_v3, tc 8+0.08, SPRT elo0=0 elo1=10). The expected gain is small, so let it run to a bound or at least 1000 games, and record the nps cost from bench.
+
+
 
 ## Sources
 - Chess Programming Wiki: Bitboards, Square Mapping Considerations.
