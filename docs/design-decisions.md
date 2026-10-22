@@ -316,6 +316,15 @@ which alternatives existed, and why.
 - Elo vs the previous build with the same eval (cutechess, new version first, tc 8+0.08, SPRT elo0=0 elo1=10). Also compare the share of "Draw by 3-fold repetition" games, which should drop clearly. Bench nodes may change slightly (draw scores prune differently).
 - 289 of 501 games in the 5c vs 5b match and 259 of 485 in 5d vs 5c ended by 3-fold repetition. Without repetition awareness the engine cannot avoid repeating when ahead or exploit it when behind, which also wastes eval gains and inflates the draw rate.
 
+## Tool: `bench eval` (evaluation microbenchmark)
+- `bench eval [rounds]` calls `evaluate` on the 10 bench positions `rounds` times (default 200000, so 2 million calls) and prints the total time, ns per call and a checksum of all returned scores.
+- Reason: the single-pass refactor showed that guessing the eval's cost from search nps is unreliable. Search nps mixes eval, movegen, make/unmake, TT and quiescence; this isolates the eval.
+- Comparison with search: at about 7 Mnps the search spends about 143 ns per node. The ratio ns/eval to ns/node shows the eval share (the ratio is approximate, since the search calls the eval once per quiescence node and once per null-move check).
+- The checksum is deterministic: two builds with the same eval must print the same checksum, so it doubles as a cheap "eval unchanged" check for refactors.
+- Rules: Release build only, nothing else running, 5 runs, take the median.
+- Decision rule: if the eval is more than about half of the per-node time, optimise the eval; if it is below about 30%, the time is in movegen and quiescence and the dedicated capture generator is the next speed step.
+
+
 
 
 
