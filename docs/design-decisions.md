@@ -346,7 +346,16 @@ which alternatives existed, and why.
 - Rejected: templating `evaluate` itself on a trace type (touches the hot path, harder to read), tuning through repeated `evaluate` calls with modified tables (the tables are constexpr and the PST sums are incremental), tuning the king attack penalty now (needs a table form first, later step).
 - Measurement: no behaviour change; `bench 8` nodes (12,431,983) and `bench eval` checksum per round (435) must stay identical, ns/eval within noise of 51.
 
-
+## 5e-2: Tuning data pipeline
+- Source: the Lichess Elite Database (database.nikonoel.fr), monthly PGN files of Lichess games between strong players (the site filters 2400+ against 2200+, bullet excluded). Chosen over engine self-play for 5e because the game quality is far above my engine's, and over the full Lichess open database because that one is hundreds of GB unpacked per month.
+- A Python script (`tools/pgn_to_positions.py`, python-chess) turns PGN into text lines `<FEN>;<result>`, with the result from White's point of view (1.0, 0.5, 0.0). Python is used for the PGN/SAN parsing only; the tuner itself stays in C++ (5e-3).
+- Filters per position: skip the first 10 plies (opening theory), skip positions in check, skip positions reached by a capture or promotion (a rough quiet filter), skip games whose Termination is not Normal (time forfeits and abandonments mislabel the position).
+- Sampling: 8 random positions per game (seeded), so positions of one game, which share a label, do not dominate the set.
+- Split: every 10th game goes to the validation file and the rest to the training file, split by game so no game appears in both (a split by position would leak the label).
+- Target size: about 4 million training positions (about 500k games), enough for 405 parameters with room to spare.
+- Known limitations: labels are game results of human games, so they are noisy; the quiet filter is crude (a position can still hold a pending capture); the Elite database has no engine evaluations.
+- Rejected for now: engine-based quiet filter (static eval against quiescence score, a possible refinement in 5e-3), Stockfish-labelled data (not needed for Texel; relevant for NNUE in stage 7), self-play data (slow and weak at this stage).
+- Measurement: the script prints games read, games used, positions per file and the result distribution; spot-check ten positions in the engine with `position fen ...` and `d`. The final value of the data is measured only by the Elo match after tuning (5e-4).
 
 ## Sources
 - Chess Programming Wiki: Bitboards, Square Mapping Considerations.

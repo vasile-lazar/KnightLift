@@ -30,7 +30,7 @@ Every result needs: date, git commit, compiler, flags, build type.
 | 4     | 206603        | 2011             | 2 ms        |
 | 5     | 5072212       | 37143            | 79 ms       |
 
-## 3d vs 3c engine versions with a opening book
+## 3d vs 3c engine versions with an opening book
 
 Score of KL_3d vs KL_3c: 9 - 8 - 33  [0.510] 50
 ... KL_3d playing White: 6 - 2 - 17  [0.580] 25
@@ -137,9 +137,22 @@ bestmove a2a3
 | no king_safety                             | 53      |
 | none of the three (material + PST + phase) | 24      |
 - Approximate cost per part: PST loop 24 ns, king safety 19, pawn structure 14, mobility 11.
-- Decision: incremental material/PST/phase first (largest part, bit-identical result), pawn hash table afterwards.
+- Decision: incremental material/PST/phase first (largest part, bit-identical result), pawn hash table afterward.
 
 ### Incremental material/PST/phase (Release, GCC, i5-14400F)
 - bench eval: 72 ns/eval -> 51 ns/eval (-29%). Checksum per round unchanged (435).
 - bench 8: total nodes 12,431,983 (identical to 4g, all per-position lines identical); time <fill in> ms (4g median 1761 ms).
 - Eval is now roughly 35-40% of node time; remaining cost: king safety about 19 ns, pawn structure about 14, mobility about 11.
+
+### 5e-2 tuning data (Lichess Elite Database, 2020-09 to 2020-12, tools/pgn_to_positions.py)
+| month   | games read | games used | train     | val     |
+|---------|------------|------------|-----------|---------|
+| 2020-09 | 364,782    | 284,019    | 2,037,191 | 225,479 |
+| 2020-10 | 403,071    | 315,072    | 2,258,979 | 250,369 |
+| 2020-11 | 441,263    | 345,428    | 2,478,379 | 273,529 |
+| 2020-12 | 491,920    | 386,023    | 2,767,791 | 307,699 |
+- Total: 1,330,542 games used, 9,542,340 train positions, 1,057,076 val positions.
+- Result share (White POV): win 0.47, draw 0.114, loss 0.416 in every month.
+- About 78% of games passed the filters (the rest were non-Normal terminations or too short).
+
+
