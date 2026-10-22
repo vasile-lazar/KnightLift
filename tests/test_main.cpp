@@ -463,6 +463,21 @@ namespace {
         b.set_from_fen("4k3/P7/8/8/8/8/8/4K3 w - - 0 1");
         check(evaluate(b) > evaluate(a), "eval: endgame pawn advancement");
 
+        // Incremental PST/phase: a position reached by moves evaluates like the same FEN.
+        const std::pair<std::string_view, std::vector<const char *>> lines[] = {
+            {kStartFen, {"e2e4", "e7e5", "g1f3", "b8c6", "f1c4", "g8f6", "e1g1", "f6e4", "f1e1", "d7d5"}},
+            {"8/P7/8/8/8/8/8/k6K w - - 0 1", {"a7a8q"}},
+            {"4k3/8/8/3pP3/8/8/8/4K3 w - d6 0 1", {"e5d6"}},
+        };
+        for (const auto &line: lines) {
+            a.set_from_fen(line.first);
+            bool played = true;
+            for (const char *m: line.second) played = play(a, m) && played;
+            b.set_from_fen(a.to_fen());
+            check(played && a.consistent() && evaluate(a) == evaluate(b),
+                  "eval: incremental equals fresh: " + std::string(line.first));
+        }
+
         // Phase clamp: far more than 24 phase points (promotions) must not break anything.
         a.set_from_fen("QQQQkQQQ/QQQQQQQQ/8/8/8/8/8/4K3 w - - 0 1");
         check(std::abs(evaluate(a)) < 30000, "eval: phase clamp, no overflow");

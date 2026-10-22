@@ -324,6 +324,17 @@ which alternatives existed, and why.
 - Rules: Release build only, nothing else running, 5 runs, take the median.
 - Decision rule: if the eval is more than about half of the per-node time, optimise the eval; if it is below about 30%, the time is in movegen and quiescence and the dedicated capture generator is the next speed step.
 
+## Incremental material, PST and phase
+- `Position` keeps three integers updated in `put_piece`, `remove_piece` and `move_piece`: `psqMg_` and `psqEg_` (White minus Black material + PST, middlegame and endgame) and `phase_` (unclamped sum of piece phase weights). Every make/unmake path goes through those three primitives, so none of the move types needs special code.
+- The tables move to a new header `eval_tables.hpp`. A combined signed table `kPieceMg[piece][square]` / `kPieceEg` contains material + PST, the `^ 56` mirror for White and the sign (+ White, - Black), so an update is one array lookup and one add.
+- `State` stores the three values before each move and `unmake_move` restores them, the same way as the key. Null moves change nothing.
+- `consistent()` recomputes the three values from the mailbox, so every existing make/unmake and perft test now also checks the incremental update.
+- `evaluate` reads the values and only computes pawn structure, mobility and king safety. The result is bit-identical (integer sums, same tapering formula).
+- Why: bench eval ablation showed the PST loop costs about 24 of 72 ns per eval. This is also the accumulator pattern needed for NNUE in stage 7.
+- Cost: three adds per piece move in `make_move`, and 12 more bytes per `State` (80 KB per Position copy; copies are rare).
+- Rejected for now: a pawn hash table (next step, needs a pawn key), lazy eval cutoffs (changes the eval, needs an Elo match).
+- Measurement: bench 8 total nodes (12,431,983) and every per-position line must be identical to 4g; `bench eval` checksum per round must stay 435; then compare ns/eval (72) and bench 8 time (about 1761 ms).
+
 
 
 
