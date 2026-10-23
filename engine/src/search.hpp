@@ -56,6 +56,9 @@ namespace KnightLift
     // Quiescence search with a full window, from the side to move's point of view.
     // Used by the tuner's quiet-position filter.
     int quiescence_score(Position &pos);
-    
+    // Like quiescence_score, but gives up after maxMs. Returns false (and leaves score
+    // unspecified) when the search was aborted, which means the position is not quiet.
+    bool quiescence_score_within(Position &pos, int maxMs, int &score);
+
     void set_null_move(bool enabled);
 } // namespace KnightLift

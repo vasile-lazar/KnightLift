@@ -170,3 +170,9 @@ bestmove a2a3
 - 5e first: 112-108-180 in 400 games, Elo +3.5 +/- 25.3, LOS 60.6%, draw ratio 45% (168 repetition, 7 fifty-move, 5 insufficient material).
 - Timed match for comparison: 59-81-45 at 185 games (about -41 +/- 44), stopped manually.
 
+### 5e-5 round 2 tuning (Stockfish-evaluation labels, tools/tune.cpp --label cp)
+- Data: Lichess evaluation database sample, 2% rate, depth >= 20, |cp| <= 1000, quiet filter (not in check, |quiescence - static| <= 10, quiescence over 20 ms skipped). Train 4,276,985 and val 224,835 positions (2,079,757 non-quiet skipped, 106 quiescence timeouts, 17 unreadable lines).
+- Label convention: cp is from White's point of view (correlation with the engine score 0.553 against 0.028 for the side-to-move view). K fixed 0.00368.
+- Loss: train 0.0175776 -> 0.0160758, val 0.0175665 -> 0.0161043 (-8.3%; round 1 with game results was -2%). Converged after about 150 epochs of 300, no overfitting.
+
+

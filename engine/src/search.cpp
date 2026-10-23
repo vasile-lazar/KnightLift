@@ -356,7 +356,16 @@ namespace KnightLift {
         Searcher searcher(pos, nullptr, nullptr);
         return searcher.quiescence(-kInfinity, kInfinity, true);
     }
-    
+
+    bool quiescence_score_within(Position &pos, int maxMs, int &score) {
+        SearchLimits limits;
+        limits.hardMs = maxMs;
+        Searcher searcher(pos, &limits, nullptr);
+        searcher.enable_stop_checks();
+        score = searcher.quiescence(-kInfinity, kInfinity, true);
+        return !searcher.aborted();
+    }
+
     SearchResult search_iterative(Position &pos, const SearchLimits &limits,
                                   const std::atomic<bool> &stop, const InfoCallback &onInfo) {
         Searcher searcher(pos, &limits, &stop, &gTT);

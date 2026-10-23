@@ -364,6 +364,14 @@ namespace {
         check(quiescence_score(pos) == evaluate(pos), "quiescence score equals static eval when quiet");
         pos.set_from_fen("4k3/8/8/3q4/8/8/8/3QK3 w - - 0 1");
         check(quiescence_score(pos) > evaluate(pos) + 500, "quiescence score sees a free queen");
+
+        int q = 0;
+        pos.set_from_fen(kStartFen);
+        check(quiescence_score_within(pos, 20, q) && q == evaluate(pos), "quiescence within limit: quiet position");
+        pos.set_from_fen("4k3/8/1ppppppp/pppppppp/1PPPPPPP/PPPPPPPP/8/4K3 w - - 0 1");
+        const std::string pathological = pos.to_fen();
+        check(!quiescence_score_within(pos, 20, q), "quiescence within limit: gives up on a pawn-wall position");
+        check(pos.to_fen() == pathological && pos.consistent(), "aborted quiescence restores the position");
     }
 
     void test_alphabeta() {
@@ -489,27 +497,30 @@ namespace {
         a.set_from_fen("QQQQkQQQ/QQQQQQQQ/8/8/8/8/8/4K3 w - - 0 1");
         check(std::abs(evaluate(a)) < 30000, "eval: phase clamp, no overflow");
 
-        // Isolated pawns: a2+c2 vs a2+b2 have identical PST sums, so the difference is exactly
-        // two isolated penalties (both setups have the same passed bonuses).
+        // Pawn structure and mobility features, checked through the coefficient trace so these
+        // tests do not depend on the parameter values.
+        using namespace EvalParams;
         a.set_from_fen("4k3/8/8/8/8/8/P1P5/4K3 w - - 0 1");
         b.set_from_fen("4k3/8/8/8/8/8/PP6/4K3 w - - 0 1");
-        check(evaluate(b) - evaluate(a) == 30, "eval: isolated pawn penalty");
+        check(eval_trace(a).coef[kIdxIsolated] == 2 && eval_trace(b).coef[kIdxIsolated] == 0,
+              "eval: isolated pawns counted");
 
-        // Doubled pawns (plus the isolation that comes with them) cost clearly more than a
-        // pawn pair that is neither.
         a.set_from_fen("4k3/8/8/8/8/P7/P7/4K3 w - - 0 1");
         b.set_from_fen("4k3/8/8/8/8/1P6/P7/4K3 w - - 0 1");
-        check(evaluate(b) > evaluate(a) + 40, "eval: doubled pawn penalty");
+        check(eval_trace(a).coef[kIdxDoubled] == 1 && eval_trace(b).coef[kIdxDoubled] == 0,
+              "eval: doubled pawns counted");
 
-        // Passed pawn: e6 is blocked from passing by a black d7 pawn, but passed against a7.
+        // e6 is not passed with a black pawn on d7, but is passed against a pawn on a7.
         a.set_from_fen("4k3/3p4/4P3/8/8/8/8/4K3 w - - 0 1");
         b.set_from_fen("4k3/p7/4P3/8/8/8/8/4K3 w - - 0 1");
-        check(evaluate(b) > evaluate(a) + 50, "eval: passed pawn bonus");
+        check(eval_trace(a).coef[kIdxPassed + 5] == 0 && eval_trace(b).coef[kIdxPassed + 5] == 1,
+              "eval: passed pawn detected");
 
-        // Mobility: boxed-in bishop scores clearly lower than a free one.
+        // Bishop boxed in by its own pawns versus free.
         a.set_from_fen("4k3/8/8/8/8/8/1P1P4/2B1K3 w - - 0 1");
         b.set_from_fen("4k3/8/8/8/8/8/P5P1/2B1K3 w - - 0 1");
-        check(evaluate(b) > evaluate(a) + 25, "eval: bishop mobility");
+        check(eval_trace(b).coef[kIdxMobility + 1] > eval_trace(a).coef[kIdxMobility + 1],
+              "eval: bishop mobility counted");
 
         // King safety: a full shield beats a thin one; an empty enemy side has no safety terms.
         a.set_from_fen("6k1/8/8/8/8/8/5PPP/6K1 w - - 0 1");

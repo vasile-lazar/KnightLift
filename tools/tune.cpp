@@ -10,6 +10,7 @@
 #include <thread>
 #include <vector>
 #include <cstdlib>
+#include <cstring>
 
 #include "../engine/src/attacks.hpp"
 #include "../engine/src/eval.hpp"
@@ -65,6 +66,10 @@ namespace {
         bool whiteToMove;
     };
 
+    std::atomic<std::size_t> gLines{0};
+    std::atomic<bool> gLoading{true};
+    char gCurrent[200] = {};
+
     bool load(const std::string &path, Dataset &d, std::size_t maxPositions, const LoadOptions &opt,
               const std::vector<double> &w0, const ParamArray &params0, std::size_t &mismatches,
               std::vector<Calib> *calib) {
@@ -73,11 +78,25 @@ namespace {
             std::cerr << "cannot open " << path << '\n';
             return false;
         }
+        in.seekg(0, std::ios::end);
+        const std::streamoff fileSize = in.tellg();
+        in.seekg(0);
+        std::size_t lineNo = 0;
         Position pos;
         std::string line;
         std::size_t bad = 0;
         std::size_t skipped = 0;
+        std::size_t timedOut = 0;
+
         while (std::getline(in, line)) {
+            ++lineNo;
+            gLines.store(lineNo, std::memory_order_relaxed);
+            std::strncpy(gCurrent, line.c_str(), sizeof(gCurrent) - 1);
+            if (lineNo % 200000 == 0 && fileSize > 0) {
+                const long long pct = 100LL * static_cast<std::streamoff>(in.tellg()) / fileSize;
+                std::cout << "\r  " << path.substr(path.find_last_of("\\/") + 1) << ": " << pct
+                        << "%  (" << d.size() << " positions kept)" << std::flush;
+            }
             if (maxPositions != 0 && d.size() >= maxPositions) break;
             const std::size_t sep = line.rfind(';');
             if (sep == std::string::npos ||
@@ -94,7 +113,12 @@ namespace {
                     continue;
                 }
                 const int stat = evaluate(pos);
-                if (std::abs(quiescence_score(pos) - stat) > opt.quietMargin) {
+                int q = 0;
+                if (!quiescence_score_within(pos, 20, q)) {
+                    ++timedOut;
+                    continue;
+                }
+                if (std::abs(q - stat) > opt.quietMargin) {
                     ++skipped;
                     continue;
                 }
@@ -128,6 +152,10 @@ namespace {
         }
         if (bad != 0) std::cerr << bad << " unreadable lines in " << path << '\n';
         if (skipped != 0) std::cout << skipped << " non-quiet positions skipped in " << path << '\n';
+        if (timedOut != 0) {
+            std::cout << timedOut << " positions skipped: quiescence search over 20 ms in " << path << '\n';
+        }
+        std::cout << '\n';
         return true;
     }
 
@@ -376,12 +404,25 @@ int main(int argc, char **argv) {
     opt.cpLabels = (label == "cp");
     opt.quietMargin = quietMargin;
     std::vector<Calib> calib;
+    std::thread watchdog([] {
+        std::size_t last = 0;
+        while (gLoading.load()) {
+            std::this_thread::sleep_for(std::chrono::seconds(5));
+            const std::size_t now = gLines.load(std::memory_order_relaxed);
+            if (gLoading.load() && now == last && now != 0) {
+                std::cerr << "\nno progress for 5 s at line " << now << ": " << gCurrent << '\n';
+            }
+            last = now;
+        }
+    });
+    watchdog.detach();
     for (const std::string &f: trainFiles) {
         if (!load(f, train, maxPositions, opt, w0, params0, mismatches, &calib)) return 1;
     }
     for (const std::string &f: valFiles) {
         if (!load(f, val, maxPositions / 10, opt, w0, params0, mismatches, nullptr)) return 1;
     }
+    gLoading = false;
     std::cout << "train positions " << train.size() << ", val positions " << val.size()
             << ", threads " << threads << '\n';
     if (mismatches != 0) {

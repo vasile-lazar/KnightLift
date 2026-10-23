@@ -374,6 +374,15 @@ which alternatives existed, and why.
 - Rejected for now: mixing game results into the label (NNUE-style blend, later), regularisation toward the old values (only if the result drifts), a second move-ordering-aware filter.
 - Measurement: correlation printed by the tuner (expected clearly positive for the right convention), validation loss before and after, then a fixed-depth match against `knightlift_pre5e.exe`, and bench 7 nodes to watch the tree size.
 
+## 5e-6: Tuned parameters, round 2 (Stockfish-evaluation labels)
+- The round 2 result of 5e-5 (4.28 million quiet training positions labelled with Stockfish centipawn evaluations, validation loss 0.0175665 -> 0.0161043, -8.3%) is applied to the evaluation constants. Raw output in `docs/tuning/5e-round2.txt`.
+- Notable values: material {60, 278, 328, 378, 905} / {82, 301, 319, 546, 899}; doubled -14/-24, isolated -17/-13; passed endgame bonus {6, 14, 33, 44, 62, 55} by relative rank; mobility weights N 8/4, B 8/6, R 7/4, Q 4/4; pawn shield 24 near and 17 far (it grew in both rounds, so the labels want more king safety than the eval has terms for); king endgame PST smooth and centralised.
+- Unchanged: the king attack penalty formula, the mobility baselines, the phase weights, the shield endgame values.
+- Test change: pawn structure and mobility tests now check feature counts through the coefficient trace instead of score differences, so they no longer depend on the parameter values.
+- Measurement: bench 7 and 8 nodes against the pre-5e build (5,969,646 and 12,431,983), a fixed-depth 7 match against it (400 games) for eval quality, and a timed match only if the equal-depth result is clearly positive.
+
+
+
 
 
 ## Sources
