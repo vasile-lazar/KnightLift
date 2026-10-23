@@ -170,3 +170,7 @@ bestmove a2a3
 - 5e first: 112-108-180 in 400 games, Elo +3.5 +/- 25.3, LOS 60.6%, draw ratio 45% (168 repetition, 7 fifty-move, 5 insufficient material).
 - Timed match for comparison: 59-81-45 at 185 games (about -41 +/- 44), stopped manually.
 
+### 5e_r2 vs pre5e, fixed depth (cutechess-cli, tc=inf depth=7, Hash 16, 8moves_v3, -repeat, 6 games in parallel, no SPRT)
+- 5e_r2 first: 108-113-179 in 400 games, Elo -4.3 +/- 25.3, LOS 36.8%, draw ratio 44.8% (170 repetition, 4 fifty-move, 4 insufficient material, 1 stalemate).
+- Bench: 107 to 114% of pre5e (fill in the absolute nodes for bench 7 and bench 8).
+- Round 1 for comparison: +3.5 +/- 25.3 (game-result labels). Round 2 labels: Stockfish evaluations.
