@@ -15,6 +15,7 @@ namespace KnightLift {
         bool gNullMove = true;
         bool gLmrEnabled = true;
         bool gAspiration = true;
+        bool gHistory = true;
         constexpr int kHistoryMax = 16384;
         using HistoryTable = std::array<std::array<int, kNumSquares>, kNumSquares>;
 
@@ -98,12 +99,8 @@ namespace KnightLift {
                     if (standPat > alpha) alpha = standPat;
                 }
 
-                MoveList all;
-                generate_pseudo_legal(pos_, all);
                 MoveList captures;
-                for (const Move m: all) {
-                    if (m.is_capture() || m.is_promotion()) captures.push(m);
-                }
+                generate_pseudo_legal_captures(pos_, captures);
 
                 int scores[kMaxMoves];
                 for (std::size_t i = 0; i < captures.size(); ++i) {
@@ -265,9 +262,11 @@ namespace KnightLift {
                     if (alpha >= beta) {
                         if (quiet) {
                             store_killer(ply, m);
-                            const int bonus = std::min(depth * depth, 1600);
-                            update_history(us, m, bonus);
-                            for (int q = 0; q < numQuiets; ++q) update_history(us, quiets[q], -bonus);
+                            if (historyOn_) {
+                                const int bonus = std::min(depth * depth, 1600);
+                                update_history(us, m, bonus);
+                                for (int q = 0; q < numQuiets; ++q) update_history(us, quiets[q], -bonus);
+                            }
                         }
                         break;
                     }
@@ -355,7 +354,7 @@ namespace KnightLift {
             void enable_null_move(bool on) { nullMove_ = on; }
             void enable_draw_detection(bool on) { drawDetect_ = on; }
             void enable_lmr(bool on) { lmr_ = on; }
-
+            void enable_history(bool on) { historyOn_ = on; }
         private:
             bool should_stop() const {
                 if (stop_ != nullptr && stop_->load(std::memory_order_relaxed)) return true;
@@ -386,6 +385,7 @@ namespace KnightLift {
             bool nullMove_ = false;
             bool drawDetect_ = false;
             bool lmr_ = false;
+            bool historyOn_ = true;
         };
     } // namespace
 
@@ -417,6 +417,7 @@ namespace KnightLift {
         Searcher searcher(pos, &limits, &stop, &gTT);
         searcher.enable_null_move(gNullMove);
         searcher.enable_lmr(gLmrEnabled);
+        searcher.enable_history(gHistory);
         searcher.enable_draw_detection(true);
         SearchResult best;
 
@@ -467,4 +468,5 @@ namespace KnightLift {
     void set_null_move(bool enabled) { gNullMove = enabled; }
     void set_lmr(bool enabled) { gLmrEnabled = enabled; }
     void set_aspiration(bool enabled) { gAspiration = enabled; }
+    void set_history(bool enabled) { gHistory = enabled; }
 } // namespace KnightLift

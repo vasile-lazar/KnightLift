@@ -96,8 +96,7 @@ bestmove a2a3
 5e: 7,562,799 nodes in 1.2 seconds
 6b: 5,057,085 nodes in 0.55 seconds
 6c: 1,318,842 nodes in 0.2 seconds
-6d: 1,368,691 nodes in 0.2 seconds
-
+6d, 6e, 6f: 1,368,691 nodes in 0.2 seconds
 
 
 | 	            | history off         | 	history on          |
@@ -206,6 +205,29 @@ bestmove a2a3
 - Result: inconclusive. Node count at fixed depth rose about 4%. Root best moves and scores differ from 6c in some bench positions (for example position 7 at depth 8: 21 -> 13), consistent with search instability under narrow windows; ties between q and r promotion (d7c8) are equal-score ties.
 - Decision: merged on the same grounds as 4g (positive point estimate, LOS about 96%, standard technique), to be ablated with a UCI option later. Initial delta 25 and the doubling factor are untuned.
 
+## 6e: UCI options LMR and Aspiration (verification)
+
+- Commit: <6e commit hash>, GCC (CLion bundled MinGW), Release, C++20, -march=native.
+- Defaults (LMR on, Aspiration on): bench 7 1,368,691 and bench 8 2,741,414 nodes, equal to 6d.
+- Aspiration off: bench 7 1,318,842 and bench 8 2,632,590 nodes, equal to 6c.
+- LMR off and Aspiration off: bench 7 5,057,085 and bench 8 10,162,376 nodes, equal to 6b.
+- Conclusion: the options reproduce the earlier builds exactly, so the same exe can be used for same-build ablation matches.
+
+## 6f: History and NullMove ablation (same exe)
+
+- Commit: <6f commit hash>, GCC (CLion bundled MinGW), Release, C++20, -march=native.
+- Defaults: bench 7 1,368,691 and bench 8 2,741,414 nodes, equal to 6d/6e.
+- History off: bench 7 (depth 7) 1,380,101 nodes (1.008x), bench 8 (depth 8) 2,835,668 nodes (1.034x). With the material-only eval (4e/4f) history cost +2-3.5% nodes; with the stage-5 eval, PVS and LMR it saves 0.8% (depth 7) to 3.4% (depth 8).
+- NullMove off: bench 7 (depth 7) 1,855,016 nodes (1.355x), bench 8 (depth 8) 4,148,232 nodes (1.513x). Null move saved about 2.7x with the stage-5 eval before PVS and LMR, now 1.36-1.51x: LMR and PVS take over part of its effect.
+- Timings not compared (different sessions, Mnps varies 4.5-6.4).
+- Match History on vs off: <W-L-D, games, Elo, SPRT line>.
+- Match NullMove on vs off: <W-L-D, games, Elo, SPRT line>.
+
+## 6g: capture generator for quiescence
+
+- Commit: <6g commit hash>, GCC (CLion bundled MinGW), Release, C++20, -march=native.
+- Bench 7 (depth 7): 1,368,691 nodes and bench 8 (depth 8): 2,741,414 nodes, identical to 6d/6e/6f, as required for a change with no behaviour change. The new test (capture list equals the filtered full list, in the same order, on the root and all children of six FENs) passes.
+- Speed: not measured. Timings were taken on a machine with other processes running and were discarded as too noisy, so no speedup is claimed. The motivation (qsearch skips generating and filtering quiet moves) is a design argument here, not a measured result.
 
 
 

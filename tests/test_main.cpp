@@ -631,6 +631,45 @@ namespace {
         check(move_to_uci(r.best) == "d8e8" && r.score == 0, "draw: losing side takes the repetition");
         check(search(p, 3).score < -300, "draw: fixed-depth search ignores draws");
     }
+    void test_capture_generator() {
+        constexpr std::string_view fens[] = {
+            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+            "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
+            "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1",
+            "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1",
+            "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8",
+            "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10",
+        };
+
+        auto compare = [](const Position &p, const std::string &what) {
+            MoveList all;
+            generate_pseudo_legal(p, all);
+            MoveList expected;
+            for (const Move m: all) {
+                if (m.is_capture() || m.is_promotion()) expected.push(m);
+            }
+            MoveList got;
+            generate_pseudo_legal_captures(p, got);
+
+            bool same = expected.size() == got.size();
+            for (std::size_t i = 0; same && i < got.size(); ++i) same = (expected[i] == got[i]);
+            check(same, "capture generator equals filtered full list: " + what);
+        };
+
+        Position pos;
+        for (const std::string_view fen: fens) {
+            pos.set_from_fen(fen);
+            compare(pos, std::string(fen));
+            MoveList legal;
+            generate_legal(pos, legal);
+            for (const Move m: legal) {
+                pos.make_move(m);
+                compare(pos, std::string(fen) + " after " + move_to_uci(m));
+                pos.unmake_move(m);
+            }
+        }
+    }
+
 } // namespace
 
 int main() {
@@ -650,6 +689,7 @@ int main() {
     test_search_iterative();
     test_draws();
     test_tt();
+    test_capture_generator();
 
     std::cout << (gFailures == 0 ? "ALL TESTS PASSED" : "TESTS FAILED") << '\n';
     return gFailures == 0 ? 0 : 1;

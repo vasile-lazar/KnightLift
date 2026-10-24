@@ -60,4 +60,5 @@ namespace KnightLift
     void set_null_move(bool enabled);
     void set_lmr(bool enabled);
     void set_aspiration(bool enabled);
+    void set_history(bool enabled);
 } // namespace KnightLift

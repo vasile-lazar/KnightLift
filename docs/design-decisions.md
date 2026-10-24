@@ -426,6 +426,25 @@ which alternatives existed, and why.
 - Rejected alternatives: compile-time flags (need a separate build per ablation, which brings back the stale-exe risk).
 - Measurement method: with defaults the bench totals must equal 6d (bench 7 1,368,691, bench 8 2,741,414). With Aspiration off they must equal 6c (1,318,842 and 2,632,590). With both off they must equal 6b (5,057,085 and 10,162,376). These are the verification of the toggles.
 
+## 6f: History option and ablation script
+
+- Decision: a UCI check option History (default true). With it off, search_iterative skips update_history, so the history table stays at zero and quiet moves are ordered by killers and generation order only, the same condition as the 4f ablation. tools/run_ablation.bat runs one exe against itself with option.X=true against option.X=false (the "on" side first, so the SPRT tests the feature).
+- Where it applies: search_iterative only. Fixed-depth search() always updates history, as before.
+- Motivation: history was measured as useless with the material-only eval (4e, 4f: +2-3.5% nodes) and has not been re-measured since the stage-5 eval, PVS and LMR. LMR in particular depends on ordering quality, so the value of history can differ now. NullMove already has an option, so both ablations run on the same exe.
+- Limitations: turning history off removes the update cost as well as the ordering effect, so the match measures both together. History is not used for LMR decisions yet, which could change its value later.
+- Rejected alternatives: a separate scoring path that ignores the table but still updates it (more code for the same conclusion).
+- Measurement method: with defaults the bench totals must equal 6d/6e (bench 7 1,368,691, bench 8 2,741,414). Then bench 7 and bench 8 with History off and with NullMove off (depth written next to each total), then a timed SPRT per option on the same exe (feature on vs off).
+
+## 6g: Capture generator for quiescence
+
+- Decision: a new generate_pseudo_legal_captures(pos, list) produces only captures (including en passant) and promotions, in the same relative order as generate_pseudo_legal would emit them. quiescence() uses it instead of generating all pseudo-legal moves and filtering.
+- Where it applies: quiescence() in all searches (search() and search_iterative), so the minimax equivalence tests keep covering it.
+- Motivation: qsearch is a large share of node time and most generated quiet moves are discarded immediately. Skipping them saves generation and filtering work.
+- Limitations: the capture generator shares the pawn and piece loops with the full generator through a template flag (CapturesOnly), so there is no second copy to keep consistent. The compile-time flag costs nothing at runtime. The capture list must contain exactly the moves that the old filter (is_capture or is_promotion) kept, in the same order; a test checks this.
+- Rejected alternatives: none yet.
+- Measurement method: no behaviour change, so bench 7 and bench 8 totals must stay 1,368,691 and 2,741,414 with all options at default (depth written next to each). A test compares the capture list with the filtered full list (same moves, same order) on the perft FENs. Speed: bench 8 time and nodes/second, several runs each, same session as the previous exe (knightlift_6f.exe). No SPRT needed unless the node counts change.
+
+
 
 
 

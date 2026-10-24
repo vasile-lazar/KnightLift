@@ -19,13 +19,13 @@ namespace KnightLift {
             list.push(Move(from, to, capture ? MoveFlag::PromoCaptureKnight : MoveFlag::PromoKnight));
         }
 
+        template<bool CapturesOnly>
         void generate_pawn_moves(const Position &pos, Color us, MoveList &list) {
             const Bitboard empty = ~pos.occupied();
             const Bitboard enemies = pos.pieces(~us);
             const int up = (us == Color::White) ? 8 : -8;
-            const Rank startRank = (us == Color::White) ? Rank::R2 : Rank::R7;
+            [[maybe_unused]] const Rank startRank = (us == Color::White) ? Rank::R2 : Rank::R7;
             const Rank promoRank = (us == Color::White) ? Rank::R8 : Rank::R1;
-
             Bitboard pawns = pos.pieces(us, PieceType::Pawn);
             while (pawns) {
                 const Square from = pop_lsb(pawns);
@@ -35,7 +35,7 @@ namespace KnightLift {
                 if (empty & square_bb(one)) {
                     if (rank_of(one) == promoRank) {
                         add_promotions(from, one, false, list);
-                    } else {
+                    } else if constexpr (!CapturesOnly) {
                         list.push(Move(from, one, MoveFlag::Quiet));
                         const Square two = offset(one, up);
                         if (rank_of(from) == startRank && (empty & square_bb(two))) {
@@ -61,11 +61,11 @@ namespace KnightLift {
             }
         }
 
+        template<bool CapturesOnly>
         void generate_piece_moves(const Position &pos, Color us, MoveList &list) {
             const Bitboard occupied = pos.occupied();
-            const Bitboard allowed = ~pos.pieces(us);
             const Bitboard enemies = pos.pieces(~us);
-
+            const Bitboard allowed = CapturesOnly ? enemies : ~pos.pieces(us);
             for (const PieceType pt: {
                      PieceType::Knight, PieceType::Bishop, PieceType::Rook,
                      PieceType::Queen, PieceType::King
@@ -109,9 +109,15 @@ namespace KnightLift {
 
     void generate_pseudo_legal(const Position &pos, MoveList &list) {
         const Color us = pos.side_to_move();
-        generate_pawn_moves(pos, us, list);
-        generate_piece_moves(pos, us, list);
+        generate_pawn_moves<false>(pos, us, list);
+        generate_piece_moves<false>(pos, us, list);
         generate_castling(pos, us, list);
+    }
+
+    void generate_pseudo_legal_captures(const Position &pos, MoveList &list) {
+        const Color us = pos.side_to_move();
+        generate_pawn_moves<true>(pos, us, list);
+        generate_piece_moves<true>(pos, us, list);
     }
 
     void generate_legal(Position &pos, MoveList &list) {
