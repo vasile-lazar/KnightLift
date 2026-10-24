@@ -381,6 +381,15 @@ which alternatives existed, and why.
 - Decision: values not merged; the trace, data scripts and tuner remain. Raw output kept in `docs/tuning/5e-round2.txt`. Hand-crafted evaluation tuning stops here; the labelled quiet-position pipeline is reused for NNUE (stage 7).
 - Limitation: 400 games resolve only differences above about 20 Elo, so a gain below that is not excluded, only not shown.
 
+## 6a: Match script
+
+- Decision: tools/run_match.bat wraps cutechess-cli. Usage: run_match NEW OLD for the timed SPRT (tc 8+0.08, elo0=0 elo1=10, concurrency 6), run_match NEW OLD 7 for the fixed-depth match (tc=inf depth=7, 200 rounds, no SPRT). NEW and OLD are the exe names without the knightlift_ prefix and .exe.
+- Where it applies: every strength comparison from stage 6 on.
+- Motivation: the command is long and the same mistakes keep recurring (new version not listed first, so SPRT tests the wrong engine; PGN name reused and overwritten). The script puts NEW first by construction and picks a fresh PGN name (NEW_vs_OLD.pgn, then _2, _3, ...).
+- Limitations: Windows batch only, paths hard-coded to this machine, no score or game-count logging when a match is killed (still recorded by hand).
+- Rejected alternatives: Python wrapper (extra dependency for a 20-line job).
+- Measurement method: not applicable, it is infrastructure. Checked by running it with a short fixed-depth match and confirming the engine order and PGN naming.
+
 
 ## Sources
 - Chess Programming Wiki: Bitboards, Square Mapping Considerations.
