@@ -97,7 +97,11 @@ namespace KnightLift {
                         text << "id name " << kEngineName << ' ' << kVersion << '\n'
                                 << "id author " << kAuthor << '\n'
                                 << "option name Hash type spin default 16 min 1 max 4096\n"
-                                << "option name NullMove type check default true\nuciok";
+                                << "option name NullMove type check default true\n"
+                                << "option name Hash type spin default 16 min 1 max 4096\n"
+                                << "option name NullMove type check default true\n"
+                                << "option name LMR type check default true\n"
+                                << "option name Aspiration type check default true\nuciok";
                         send(text.str());
                     } else if (command == "isready") {
                         send("readyok");
@@ -248,6 +252,10 @@ namespace KnightLift {
                     } // malformed value: ignore
                 } else if (name == "NullMove") {
                     set_null_move(value == "true");
+                } else if (name == "LMR") {
+                    set_lmr(value == "true");
+                } else if (name == "Aspiration") {
+                    set_aspiration(value == "true");
                 }
             }
 

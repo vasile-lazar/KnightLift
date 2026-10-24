@@ -417,6 +417,15 @@ which alternatives existed, and why.
 - Rejected alternatives: none yet. Delta tuning and widening by a different factor are postponed.
 - Measurement method: bench 7 and bench 8 (Release, depth written next to the number) against 6c: 1,318,842 and 2,632,590. Bench uses fixed depth, so it sees the node effect of the windows. Strength: timed SPRT, 6d vs 6c (new first).
 
+## 6e: UCI options LMR and Aspiration
+
+- Decision: two UCI check options, LMR and Aspiration (both default true), set from setoption into globals in search.cpp, like NullMove. search_iterative reads them: enable_lmr(gLmrEnabled), and the narrow window is used only if gAspiration is on.
+- Where it applies: search_iterative only. Fixed-depth search() and the minimax reference are unaffected.
+- Motivation: 6d was inconclusive (+16.9 +/- 19.2 at 700 games). A same-build ablation (option on vs off, same exe) separates the effect of the technique from build differences, and it is needed for the re-measurement of history and null move after LMR.
+- Limitations: an option checked on every iteration costs nothing measurable, but each toggle is one more path that must stay tested. The defaults must stay on, so normal play is unchanged.
+- Rejected alternatives: compile-time flags (need a separate build per ablation, which brings back the stale-exe risk).
+- Measurement method: with defaults the bench totals must equal 6d (bench 7 1,368,691, bench 8 2,741,414). With Aspiration off they must equal 6c (1,318,842 and 2,632,590). With both off they must equal 6b (5,057,085 and 10,162,376). These are the verification of the toggles.
+
 
 
 
