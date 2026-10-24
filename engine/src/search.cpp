@@ -99,12 +99,8 @@ namespace KnightLift {
                     if (standPat > alpha) alpha = standPat;
                 }
 
-                MoveList all;
-                generate_pseudo_legal(pos_, all);
                 MoveList captures;
-                for (const Move m: all) {
-                    if (m.is_capture() || m.is_promotion()) captures.push(m);
-                }
+                generate_pseudo_legal_captures(pos_, captures);
 
                 int scores[kMaxMoves];
                 for (std::size_t i = 0; i < captures.size(); ++i) {

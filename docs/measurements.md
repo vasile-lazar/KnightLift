@@ -223,5 +223,11 @@ bestmove a2a3
 - Match History on vs off: <W-L-D, games, Elo, SPRT line>.
 - Match NullMove on vs off: <W-L-D, games, Elo, SPRT line>.
 
+## 6g: capture generator for quiescence
+
+- Commit: <6g commit hash>, GCC (CLion bundled MinGW), Release, C++20, -march=native.
+- Bench 7 (depth 7): 1,368,691 nodes and bench 8 (depth 8): 2,741,414 nodes, identical to 6d/6e/6f, as required for a change with no behaviour change. The new test (capture list equals the filtered full list, in the same order, on the root and all children of six FENs) passes.
+- Speed: not measured. Timings were taken on a machine with other processes running and were discarded as too noisy, so no speedup is claimed. The motivation (qsearch skips generating and filtering quiet moves) is a design argument here, not a measured result.
+
 
 
