@@ -390,6 +390,16 @@ which alternatives existed, and why.
 - Rejected alternatives: Python wrapper (extra dependency for a 20-line job).
 - Measurement method: not applicable, it is infrastructure. Checked by running it with a short fixed-depth match and confirming the engine order and PGN naming.
 
+## 6b: Principal variation search
+
+- Decision: after the first legal move of a node, every other move is searched with a null window (-alpha-1, -alpha). If it returns alpha < score < beta, it is re-searched with the full window (-beta, -alpha). Applied in alphabeta() and search_root(). At the root, beta is infinity, so the re-search condition is score > best so far.
+- Where it applies: all nodes of alphabeta(), so also fixed-depth search() with useAlphaBeta; the minimax reference is untouched.
+- Motivation: with good ordering (TT move, MVV-LVA, killers, history) the first move is usually best, and null-window searches cut off cheaper than full-window ones. The tuned evals made the tree 1.3-1.5x larger; this is the first of the methods that address that.
+- Limitations: pays off only with good ordering; each failed null-window search costs a re-search. Bench node counts are not comparable to the old ones as a strength measure.
+- Rejected alternatives: none yet. Not combined with LMR in this step so the effect can be measured alone.
+- Measurement method: the alpha-beta == minimax tests must still pass (same score at depth <= 3). Bench 7 and bench 8 (Release) with the depth written next to each number, compared to 5,969,646 and 12,431,983. Strength: timed SPRT, PVS vs knightlift_pre5e.exe copy (new first).
+
+
 
 ## Sources
 - Chess Programming Wiki: Bitboards, Square Mapping Considerations.

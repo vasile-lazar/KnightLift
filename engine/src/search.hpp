@@ -44,6 +44,9 @@ namespace KnightLift
     // Fixed-depth search, never interrupted. useAlphaBeta = false is plain minimax.
     SearchResult search(Position& pos, int depth, bool useAlphaBeta = true);
 
+    int quiescence_score(Position &pos);
+    bool quiescence_score_within(Position &pos, int maxMs, int &score);
+
     // Iterative deepening with time limits; stops when `stop` becomes true.
     // Calls onInfo (if set) after every completed depth.
     SearchResult search_iterative(Position& pos, const SearchLimits& limits,

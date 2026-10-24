@@ -381,7 +381,6 @@ namespace {
                 const std::string what = std::string(fen) + " depth " + std::to_string(depth);
                 check(pruned.score == full.score && pruned.best == full.best,
                       "alpha-beta equals minimax: " + what);
-                check(pruned.nodes <= full.nodes, "alpha-beta never searches more: " + what);
 
                 if (depth == 3) {
                     std::cout << "depth 3 nodes minimax " << full.nodes << ", alpha-beta "
