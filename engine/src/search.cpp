@@ -288,7 +288,8 @@ namespace KnightLift {
             }
 
             // `first` (if not none) is searched first, e.g. the best move of the previous iteration.
-            SearchResult search_root(int depth, Move first, bool useAlphaBeta) {
+            SearchResult search_root(int depth, Move first, bool useAlphaBeta,
+                         int alpha = -kInfinity, int beta = kInfinity) {
                 MoveList list;
                 bool searchedAny = false;
                 const Color us = pos_.side_to_move();
@@ -319,11 +320,12 @@ namespace KnightLift {
                     if (!useAlphaBeta) {
                         score = -negamax(depth - 1, 1);
                     } else if (!searchedAny) {
-                        score = -alphabeta(depth - 1, 1, -kInfinity, kInfinity);
+                        score = -alphabeta(depth - 1, 1, -beta, -alpha);
                     } else {
-                        score = -alphabeta(depth - 1, 1, -result.score - 1, -result.score);
-                        if (!aborted_ && score > result.score)
-                            score = -alphabeta(depth - 1, 1, -kInfinity, -result.score);
+                        const int a = std::max(alpha, result.score);
+                        score = -alphabeta(depth - 1, 1, -a - 1, -a);
+                        if (!aborted_ && score > a && score < beta)
+                            score = -alphabeta(depth - 1, 1, -beta, -a);
                     }
                     searchedAny = true;
                     pos_.unmake_move(m);
@@ -338,8 +340,11 @@ namespace KnightLift {
                 if (result.best.is_none()) {
                     result.score = pos_.in_check() ? -kMateScore : 0;
                 } else if (tt_ != nullptr) {
-                    tt_->store(pos_.key(), result.best, score_to_tt(result.score, 0), depth,
-                               Bound::Exact);
+                    const Bound bound = result.score >= beta ? Bound::Lower
+                                        : result.score <= alpha ? Bound::Upper
+                                                                : Bound::Exact;
+                    tt_->store(pos_.key(), bound == Bound::Upper ? Move::none() : result.best,
+                               score_to_tt(result.score, 0), depth, bound);
                 }
                 result.nodes = nodes_;
                 return result;
@@ -414,7 +419,30 @@ namespace KnightLift {
         SearchResult best;
 
         for (int depth = 1; depth <= limits.maxDepth && depth <= kMaxDepth; ++depth) {
-            const SearchResult r = searcher.search_root(depth, best.best, true);
+            SearchResult r;
+            if (depth < 5 || best.best.is_none()) {
+                r = searcher.search_root(depth, best.best, true);
+            } else {
+                int delta = 25;
+                int alpha = best.score - delta;
+                int beta = best.score + delta;
+                Move first = best.best;
+                for (;;) {
+                    if (delta > 1000) { alpha = -kInfinity; beta = kInfinity; }
+                    r = searcher.search_root(depth, first, true, alpha, beta);
+                    if (searcher.aborted()) break;
+                    if (r.score <= alpha && alpha > -kInfinity) {
+                        beta = (alpha + beta) / 2;
+                        alpha = std::max(r.score - delta, -kInfinity);
+                    } else if (r.score >= beta && beta < kInfinity) {
+                        beta = std::min(r.score + delta, +kInfinity);
+                        if (!r.best.is_none()) first = r.best;
+                    } else {
+                        break;
+                    }
+                    delta += delta;
+                }
+            }
             if (searcher.aborted()) break; // discard the unfinished iteration
 
             best = r;

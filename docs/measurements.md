@@ -96,6 +96,9 @@ bestmove a2a3
 5e: 7,562,799 nodes in 1.2 seconds
 6b: 5,057,085 nodes in 0.55 seconds
 6c: 1,318,842 nodes in 0.2 seconds
+6d: 1,368,691 nodes in 0.2 seconds
+
+
 
 | 	            | history off         | 	history on          |
 |--------------|---------------------|----------------------|
@@ -193,6 +196,16 @@ bestmove a2a3
 - Bench 8 (depth 8): 10,162,376 -> 2,632,590 nodes (0.259x, 3.9x fewer), 475 ms, 5.54 Mnps. No same-session timing of 6b, so no speed comparison; Mnps drops because the remaining nodes are the more expensive ones.
 - Match: tc 8+0.08, Hash 16, concurrency 6, book 8moves_v3.pgn, SPRT elo0=0 elo1=10 alpha=beta=0.05. 6c vs 6b: 67-17-73 over 157 games, +114.6 +/- 40.0, LOS 100.0%, draw ratio 46.5%, llr 2.96, H1 accepted. 5 unfinished games discarded.
 - Caveat: SPRT stopped at 157 games, so the point estimate is likely inflated (lower bound about +75). No same-build ablation yet; planned together with the history and null-move re-measurement via a UCI option.
+
+## 6d: aspiration windows vs 6c
+
+- Commit: <6d commit hash>, GCC (CLion bundled MinGW), Release, C++20, -march=native.
+- Bench 7 (depth 7): 1,318,842 -> 1,368,691 nodes (1.038x), 192 ms, 7.13 Mnps.
+- Bench 8 (depth 8): 2,632,590 -> 2,741,414 nodes (1.041x), 379 ms, 7.23 Mnps. No same-session timing of 6c, so no speed comparison.
+- Match: tc 8+0.08, Hash 16, concurrency 6, book 8moves_v3.pgn, SPRT elo0=0 elo1=10 alpha=beta=0.05. 6d vs 6c: 211-177-312 over 700 games, +16.9 +/- 19.2, LOS 95.8%, draw ratio 44.6%, llr 1.24 (bounds -2.94 / 2.94), no bound reached. Stopped manually, 6 unfinished games discarded.
+- Result: inconclusive. Node count at fixed depth rose about 4%. Root best moves and scores differ from 6c in some bench positions (for example position 7 at depth 8: 21 -> 13), consistent with search instability under narrow windows; ties between q and r promotion (d7c8) are equal-score ties.
+- Decision: merged on the same grounds as 4g (positive point estimate, LOS about 96%, standard technique), to be ablated with a UCI option later. Initial delta 25 and the doubling factor are untuned.
+
 
 
 

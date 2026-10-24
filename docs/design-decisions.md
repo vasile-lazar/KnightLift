@@ -408,6 +408,15 @@ which alternatives existed, and why.
 - Rejected alternatives: none yet. Not combined with reduced reductions for killers, PV nodes or improving positions, so the plain version is measured first.
 - Measurement method: bench 7 and bench 8 (Release, depth written next to the number) against 6b: 5,057,085 and 10,162,376. Strength: timed SPRT, 6c vs 6b (new first). Node count alone says nothing about strength here, since LMR changes which lines are searched.
 
+## 6d: Aspiration windows
+
+- Decision: from depth 5 on, search_iterative calls search_root with the window (prev - delta, prev + delta), where prev is the score of the previous iteration and delta starts at 25. On a fail low (score <= alpha) alpha is lowered, on a fail high (score >= beta) beta is raised, in both cases delta doubles (delta += delta / 2 after the first widening is a common alternative, not used). Once delta exceeds 1000 the window becomes the full window. At fail low, beta is moved to (alpha + beta) / 2. A fail high keeps the previous best move.
+- Where it applies: search_root() gets alpha and beta parameters; only search_iterative uses a narrow window. Fixed-depth search() passes the full window, so the equivalence tests are unchanged.
+- Motivation: a narrow window gives more cutoffs in the whole tree, and the score changes little between consecutive iterations. With PVS and LMR already in, the tree is smaller, so the gain is expected to be small, and the re-search cost is the risk.
+- Limitations: each fail costs a re-search of the whole iteration. Mate scores and sharp positions fail often. The initial delta 25 is a usual value, not tuned. TT entries stored from a failed search are bounds, which is correct but can reduce later TT cutoffs.
+- Rejected alternatives: none yet. Delta tuning and widening by a different factor are postponed.
+- Measurement method: bench 7 and bench 8 (Release, depth written next to the number) against 6c: 1,318,842 and 2,632,590. Bench uses fixed depth, so it sees the node effect of the windows. Strength: timed SPRT, 6d vs 6c (new first).
+
 
 
 
