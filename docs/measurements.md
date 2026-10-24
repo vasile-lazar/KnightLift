@@ -94,6 +94,7 @@ bestmove a2a3
 5d: 5,970,017 nodes in 0.77 seconds
 4g: 5,969,646 nodes in 0.92 seconds
 5e: 7,562,799 nodes in 1.2 seconds
+6b: 5,057,085 nodes in 0.55 seconds
 
 | 	            | history off         | 	history on          |
 |--------------|---------------------|----------------------|
@@ -174,3 +175,15 @@ bestmove a2a3
 - 5e_r2 first: 108-113-179 in 400 games, Elo -4.3 +/- 25.3, LOS 36.8%, draw ratio 44.8% (170 repetition, 4 fifty-move, 4 insufficient material, 1 stalemate).
 - Bench: 107 to 114% of pre5e (fill in the absolute nodes for bench 7 and bench 8).
 - Round 1 for comparison: +3.5 +/- 25.3 (game-result labels). Round 2 labels: Stockfish evaluations.
+
+## 6b: PVS vs pre5e
+
+- Commit: <6b commit hash>, GCC (CLion bundled MinGW), Release, C++20, -march=native.
+- Bench 7 (depth 7): 5,969,646 -> 5,057,085 nodes (0.847x, 15% fewer).
+- Bench 8 (depth 8): 12,431,983 -> 10,162,376 nodes (0.817x, 18% fewer). 6b alone: 1325 ms, 7.67 Mnps. No same-session timing of pre5e, so no speed comparison.
+- Match: tc 8+0.08, Hash 16, concurrency 6, book 8moves_v3.pgn, SPRT elo0=0 elo1=10 alpha=beta=0.05. 6b vs pre5e: 175-109-202 over 486 games, +47.5 +/- 23.7, LOS 100.0%, draw ratio 41.6%, llr 2.95, H1 accepted. 5 unfinished games discarded.
+- Earlier partial run (killed): 40-20-40 at 100 games, +70.4 +/- 53.5, llr 0.919. Inflated by early noise, not used.
+- Note: the "alpha-beta never searches more" test was removed in 6b, because PVS re-searches can exceed minimax's node count at depth 1 (see design-decisions 6b).
+
+
+

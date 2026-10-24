@@ -222,8 +222,15 @@ namespace KnightLift {
                         pos_.unmake_move(m);
                         continue;
                     }
+                    int score;
+                    if (!hasLegalMove) {
+                        score = -alphabeta(depth - 1, ply + 1, -beta, -alpha);
+                    } else {
+                        score = -alphabeta(depth - 1, ply + 1, -alpha - 1, -alpha);
+                        if (!aborted_ && score > alpha && score < beta)
+                            score = -alphabeta(depth - 1, ply + 1, -beta, -alpha);
+                    }
                     hasLegalMove = true;
-                    const int score = -alphabeta(depth - 1, ply + 1, -beta, -alpha);
                     pos_.unmake_move(m);
                     if (aborted_) return 0;
 
@@ -263,6 +270,7 @@ namespace KnightLift {
             // `first` (if not none) is searched first, e.g. the best move of the previous iteration.
             SearchResult search_root(int depth, Move first, bool useAlphaBeta) {
                 MoveList list;
+                bool searchedAny = false;
                 const Color us = pos_.side_to_move();
                 generate_pseudo_legal(pos_, list);
                 if (first.is_none() && tt_ != nullptr) {
@@ -287,9 +295,17 @@ namespace KnightLift {
                         pos_.unmake_move(m);
                         continue;
                     }
-                    const int score = useAlphaBeta
-                                          ? -alphabeta(depth - 1, 1, -kInfinity, -result.score)
-                                          : -negamax(depth - 1, 1);
+                    int score;
+                    if (!useAlphaBeta) {
+                        score = -negamax(depth - 1, 1);
+                    } else if (!searchedAny) {
+                        score = -alphabeta(depth - 1, 1, -kInfinity, kInfinity);
+                    } else {
+                        score = -alphabeta(depth - 1, 1, -result.score - 1, -result.score);
+                        if (!aborted_ && score > result.score)
+                            score = -alphabeta(depth - 1, 1, -kInfinity, -result.score);
+                    }
+                    searchedAny = true;
                     pos_.unmake_move(m);
                     if (aborted_) return result;
 
@@ -350,6 +366,20 @@ namespace KnightLift {
     SearchResult search(Position &pos, int depth, bool useAlphaBeta) {
         Searcher searcher(pos, nullptr, nullptr);
         return searcher.search_root(depth < 1 ? 1 : depth, Move::none(), useAlphaBeta);
+    }
+
+    int quiescence_score(Position &pos) {
+        Searcher searcher(pos, nullptr, nullptr);
+        return searcher.quiescence(-kInfinity, kInfinity, true);
+    }
+
+    bool quiescence_score_within(Position &pos, int maxMs, int &score) {
+        SearchLimits limits;
+        limits.hardMs = maxMs;
+        Searcher searcher(pos, &limits, nullptr);
+        searcher.enable_stop_checks();
+        score = searcher.quiescence(-kInfinity, kInfinity, true);
+        return !searcher.aborted();
     }
 
     SearchResult search_iterative(Position &pos, const SearchLimits &limits,
