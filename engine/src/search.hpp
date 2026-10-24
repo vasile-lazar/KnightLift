@@ -58,4 +58,6 @@ namespace KnightLift
     int tt_hashfull();
 
     void set_null_move(bool enabled);
+    void set_lmr(bool enabled);
+    void set_aspiration(bool enabled);
 } // namespace KnightLift

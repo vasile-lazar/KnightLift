@@ -13,6 +13,8 @@ namespace KnightLift {
     namespace {
         TranspositionTable gTT(16);
         bool gNullMove = true;
+        bool gLmrEnabled = true;
+        bool gAspiration = true;
         constexpr int kHistoryMax = 16384;
         using HistoryTable = std::array<std::array<int, kNumSquares>, kNumSquares>;
 
@@ -414,13 +416,13 @@ namespace KnightLift {
                                   const std::atomic<bool> &stop, const InfoCallback &onInfo) {
         Searcher searcher(pos, &limits, &stop, &gTT);
         searcher.enable_null_move(gNullMove);
-        searcher.enable_lmr(true);
+        searcher.enable_lmr(gLmrEnabled);
         searcher.enable_draw_detection(true);
         SearchResult best;
 
         for (int depth = 1; depth <= limits.maxDepth && depth <= kMaxDepth; ++depth) {
             SearchResult r;
-            if (depth < 5 || best.best.is_none()) {
+            if (!gAspiration || depth < 5 || best.best.is_none()) {
                 r = searcher.search_root(depth, best.best, true);
             } else {
                 int delta = 25;
@@ -463,4 +465,6 @@ namespace KnightLift {
     }
 
     void set_null_move(bool enabled) { gNullMove = enabled; }
+    void set_lmr(bool enabled) { gLmrEnabled = enabled; }
+    void set_aspiration(bool enabled) { gAspiration = enabled; }
 } // namespace KnightLift
