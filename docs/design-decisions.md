@@ -399,6 +399,17 @@ which alternatives existed, and why.
 - Rejected alternatives: none yet. Not combined with LMR in this step so the effect can be measured alone.
 - Measurement method: the alpha-beta == minimax tests must still pass (same score at depth <= 3). Bench 7 and bench 8 (Release) with the depth written next to each number, compared to 5,969,646 and 12,431,983. Strength: timed SPRT, PVS vs knightlift_pre5e.exe copy (new first).
 
+## 6c: Late move reductions
+
+- Decision: in alphabeta(), a move is searched at reduced depth when depth >= 3, it is at least the 4th legal move of the node, it is quiet (no capture, no promotion), the side to move is not in check, and the move does not give check. Reduction R = min(int(0.75 + ln(depth) * ln(moveNumber) / 2.25), depth - 2), from a table precomputed at startup. The reduced search uses the null window; if it returns > alpha, the move is re-searched at full depth with the null window, then with the full window if it is still inside (alpha, beta), as in PVS.
+- Where it applies: alphabeta() only when enabled, which is search_iterative. Fixed-depth search() and the minimax reference stay without LMR, like null move and the TT, so the equivalence tests hold.
+- Motivation: with ordering by TT move, captures, killers and history, late quiet moves rarely become best. Searching them shallower and verifying only the ones that beat alpha shifts depth to the principal variation. The tuned evals made the tree 1.3-1.5x larger; LMR addresses that together with PVS.
+- Limitations: unsound by design, a reduced move that is actually best can be missed (it only gets found if it beats alpha at reduced depth). Depends on ordering quality, which is why history was measured as useless before the stage-5 eval and has to be re-measured. The constants (0.75, 2.25, 4th move) are the usual values, not tuned for this engine.
+- Rejected alternatives: none yet. Not combined with reduced reductions for killers, PV nodes or improving positions, so the plain version is measured first.
+- Measurement method: bench 7 and bench 8 (Release, depth written next to the number) against 6b: 5,057,085 and 10,162,376. Strength: timed SPRT, 6c vs 6b (new first). Node count alone says nothing about strength here, since LMR changes which lines are searched.
+
+
+
 
 
 ## Sources
