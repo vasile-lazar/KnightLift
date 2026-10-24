@@ -444,6 +444,15 @@ which alternatives existed, and why.
 - Rejected alternatives: none yet.
 - Measurement method: no behaviour change, so bench 7 and bench 8 totals must stay 1,368,691 and 2,741,414 with all options at default (depth written next to each). A test compares the capture list with the filtered full list (same moves, same order) on the perft FENs. Speed: bench 8 time and nodes/second, several runs each, same session as the previous exe (knightlift_6f.exe). No SPRT needed unless the node counts change.
 
+## 6h: SEE pruning in quiescence
+
+- Decision: a function see_ge(pos, move, threshold) computes the static exchange on the target square (swap algorithm, least valuable attacker first, x-rays through sliders by recomputing slider attacks with the updated occupancy, king captures last and only if the square is no longer defended). In quiescence, a capture is skipped when its SEE is below 0. Promotions and en passant are not pruned. Captures whose victim is worth at least as much as the attacker skip the SEE call, since they cannot lose material in the first exchange step.
+- Where it applies: quiescence() when prune is true, so search(), search_iterative() and the minimax reference use the same pruning and the alpha-beta == minimax tests stay valid. The tuner's quiet filter (quiescence_score) changes slightly as well.
+- Motivation: qsearch searches every capture, including queen-takes-defended-pawn, which almost never helps the side to move. Skipping losing captures cuts the qsearch tree, which is a large share of node time. This was in the postponed list since 3d.
+- Limitations: SEE is static and ignores pins and checks, so it can prune a capture that wins through a tactic (a discovered attack, a mate). Material values for SEE are the simple ones (P 100, N 325, B 325, R 500, Q 975), not the tuned eval values. The qsearch still has no check evasions, so in-check positions are not covered by this step.
+- Rejected alternatives: delta pruning (separate step, to be measured alone), SEE threshold above 0.
+- Measurement method: bench 7 and bench 8 (Release, depth written next to each) against 6g: 1,368,691 and 2,741,414. Unit tests for see_ge on hand-made positions (equal trade, losing capture, x-ray battery, pinned-attacker case documented as ignored). Strength: timed SPRT, 6h vs 6g (new first). The node count changes, so bench alone says nothing about strength.
+
 
 
 
