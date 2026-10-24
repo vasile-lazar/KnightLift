@@ -95,6 +95,7 @@ bestmove a2a3
 4g: 5,969,646 nodes in 0.92 seconds
 5e: 7,562,799 nodes in 1.2 seconds
 6b: 5,057,085 nodes in 0.55 seconds
+6c: 1,318,842 nodes in 0.2 seconds
 
 | 	            | history off         | 	history on          |
 |--------------|---------------------|----------------------|
@@ -184,6 +185,14 @@ bestmove a2a3
 - Match: tc 8+0.08, Hash 16, concurrency 6, book 8moves_v3.pgn, SPRT elo0=0 elo1=10 alpha=beta=0.05. 6b vs pre5e: 175-109-202 over 486 games, +47.5 +/- 23.7, LOS 100.0%, draw ratio 41.6%, llr 2.95, H1 accepted. 5 unfinished games discarded.
 - Earlier partial run (killed): 40-20-40 at 100 games, +70.4 +/- 53.5, llr 0.919. Inflated by early noise, not used.
 - Note: the "alpha-beta never searches more" test was removed in 6b, because PVS re-searches can exceed minimax's node count at depth 1 (see design-decisions 6b).
+
+## 6c: LMR vs 6b
+
+- Commit: <6c commit hash>, GCC (CLion bundled MinGW), Release, C++20, -march=native.
+- Bench 7 (depth 7): 5,057,085 -> 1,318,842 nodes (0.261x, 3.8x fewer), 213 ms, 6.19 Mnps.
+- Bench 8 (depth 8): 10,162,376 -> 2,632,590 nodes (0.259x, 3.9x fewer), 475 ms, 5.54 Mnps. No same-session timing of 6b, so no speed comparison; Mnps drops because the remaining nodes are the more expensive ones.
+- Match: tc 8+0.08, Hash 16, concurrency 6, book 8moves_v3.pgn, SPRT elo0=0 elo1=10 alpha=beta=0.05. 6c vs 6b: 67-17-73 over 157 games, +114.6 +/- 40.0, LOS 100.0%, draw ratio 46.5%, llr 2.96, H1 accepted. 5 unfinished games discarded.
+- Caveat: SPRT stopped at 157 games, so the point estimate is likely inflated (lower bound about +75). No same-build ablation yet; planned together with the history and null-move re-measurement via a UCI option.
 
 
 

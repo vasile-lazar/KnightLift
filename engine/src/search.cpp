@@ -1,15 +1,14 @@
-#include "search.hpp"
-
 #include <chrono>
 #include <utility>
 #include <array>
 #include <algorithm>
 #include <cstdlib>
+#include <cmath>
 
 #include "eval.hpp"
 #include "movegen.hpp"
 #include "tt.hpp"
-
+#include "search.hpp"
 namespace KnightLift {
     namespace {
         TranspositionTable gTT(16);
@@ -58,6 +57,16 @@ namespace KnightLift {
             std::swap(scores[i], scores[top]);
             list.swap(i, top);
         }
+
+        struct LmrTable {
+            std::array<std::array<int, 64>, 64> r{};
+            LmrTable() {
+                for (int d = 1; d < 64; ++d)
+                    for (int m = 1; m < 64; ++m)
+                        r[d][m] = static_cast<int>(0.75 + std::log(d) * std::log(m) / 2.25);
+            }
+        };
+        const LmrTable gLmr;
 
         class Searcher {
         public:
@@ -214,22 +223,34 @@ namespace KnightLift {
                 int best = -kInfinity;
                 Move bestMove = Move::none();
                 bool hasLegalMove = false;
+                const bool inCheck = pos_.in_check();
+                int legalCount = 0;
                 for (std::size_t i = 0; i < list.size(); ++i) {
                     pick_best(list, scores, i);
                     const Move m = list[i];
+                    const bool quiet = !m.is_capture() && !m.is_promotion();
                     pos_.make_move(m);
                     if (pos_.king_left_in_check()) {
                         pos_.unmake_move(m);
                         continue;
                     }
                     int score;
-                    if (!hasLegalMove) {
+                    if (legalCount == 0) {
                         score = -alphabeta(depth - 1, ply + 1, -beta, -alpha);
                     } else {
-                        score = -alphabeta(depth - 1, ply + 1, -alpha - 1, -alpha);
+                        int reduction = 0;
+                        if (lmr_ && depth >= 3 && legalCount >= 3 && quiet && !inCheck &&
+                            !pos_.in_check()) {
+                            reduction = std::min(gLmr.r[std::min(depth, 63)][std::min(legalCount, 63)],
+                                                 depth - 2);
+                            }
+                        score = -alphabeta(depth - 1 - reduction, ply + 1, -alpha - 1, -alpha);
+                        if (!aborted_ && reduction > 0 && score > alpha)
+                            score = -alphabeta(depth - 1, ply + 1, -alpha - 1, -alpha);
                         if (!aborted_ && score > alpha && score < beta)
                             score = -alphabeta(depth - 1, ply + 1, -beta, -alpha);
                     }
+                    ++legalCount;
                     hasLegalMove = true;
                     pos_.unmake_move(m);
                     if (aborted_) return 0;
@@ -239,7 +260,6 @@ namespace KnightLift {
                         bestMove = m;
                         if (score > alpha) alpha = score;
                     }
-                    const bool quiet = !m.is_capture() && !m.is_promotion();
                     if (alpha >= beta) {
                         if (quiet) {
                             store_killer(ply, m);
@@ -327,6 +347,8 @@ namespace KnightLift {
 
             void enable_null_move(bool on) { nullMove_ = on; }
             void enable_draw_detection(bool on) { drawDetect_ = on; }
+            void enable_lmr(bool on) { lmr_ = on; }
+
         private:
             bool should_stop() const {
                 if (stop_ != nullptr && stop_->load(std::memory_order_relaxed)) return true;
@@ -356,6 +378,7 @@ namespace KnightLift {
             std::array<HistoryTable, kNumColors> history_{};
             bool nullMove_ = false;
             bool drawDetect_ = false;
+            bool lmr_ = false;
         };
     } // namespace
 
@@ -386,6 +409,7 @@ namespace KnightLift {
                                   const std::atomic<bool> &stop, const InfoCallback &onInfo) {
         Searcher searcher(pos, &limits, &stop, &gTT);
         searcher.enable_null_move(gNullMove);
+        searcher.enable_lmr(true);
         searcher.enable_draw_detection(true);
         SearchResult best;
 
