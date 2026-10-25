@@ -57,5 +57,5 @@ jobs:
           BIN=$(find build -type f \( -name KnightLift -o -name KnightLift.exe \) | head -n1)
           echo "Using $BIN"
           OUT=$(printf 'bench 7\nquit\n' | "$BIN")
-          echo "$OUT" | tail -n 4
+          echo "$OUT"
           echo "$OUT" | grep -q "Total nodes: $BENCH7"
