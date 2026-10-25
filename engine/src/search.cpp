@@ -18,6 +18,7 @@ namespace KnightLift {
         bool gLmrEnabled = true;
         bool gAspiration = true;
         bool gHistory = true;
+        bool gRfp = true;
         constexpr int kHistoryMax = 16384;
         using HistoryTable = std::array<std::array<int, kNumSquares>, kNumSquares>;
 
@@ -196,11 +197,18 @@ namespace KnightLift {
                 }
 
                 const Color us = pos_.side_to_move();
+                const bool inCheck = pos_.in_check();
+                const int staticEval = inCheck ? 0 : evaluate(pos_);
                 const Bitboard nonPawnMaterial =
                         pos_.pieces(us) & ~(pos_.pieces(us, PieceType::Pawn) |
                                             pos_.pieces(us, PieceType::King));
+                if (rfp_ && depth <= 6 && beta - alpha == 1 && !inCheck &&
+    beta < kMateBound && beta > -kMateBound &&
+    staticEval - 80 * depth >= beta) {
+                    return staticEval;
+    }
                 if (nullMove_ && allowNull && depth >= 3 && nonPawnMaterial != 0 &&
-                    !pos_.in_check() && evaluate(pos_) >= beta) {
+                    !inCheck && staticEval >= beta) {
                     const int nullDepth = depth - 1 - (2 + depth / 6);
                     pos_.make_null_move();
                     const int nullScore = nullDepth <= 0
@@ -225,7 +233,6 @@ namespace KnightLift {
                 int best = -kInfinity;
                 Move bestMove = Move::none();
                 bool hasLegalMove = false;
-                const bool inCheck = pos_.in_check();
                 int legalCount = 0;
                 for (std::size_t i = 0; i < list.size(); ++i) {
                     pick_best(list, scores, i);
@@ -358,6 +365,7 @@ namespace KnightLift {
             void enable_draw_detection(bool on) { drawDetect_ = on; }
             void enable_lmr(bool on) { lmr_ = on; }
             void enable_history(bool on) { historyOn_ = on; }
+            void enable_rfp(bool on) { rfp_ = on; }
         private:
             bool should_stop() const {
                 if (stop_ != nullptr && stop_->load(std::memory_order_relaxed)) return true;
@@ -389,6 +397,7 @@ namespace KnightLift {
             bool drawDetect_ = false;
             bool lmr_ = false;
             bool historyOn_ = true;
+            bool rfp_ = false;
         };
     } // namespace
     bool see_ge(const Position &pos, Move m, int threshold) {
@@ -475,6 +484,7 @@ namespace KnightLift {
         searcher.enable_null_move(gNullMove);
         searcher.enable_lmr(gLmrEnabled);
         searcher.enable_history(gHistory);
+        searcher.enable_rfp(gRfp);
         searcher.enable_draw_detection(true);
         SearchResult best;
 
@@ -526,4 +536,5 @@ namespace KnightLift {
     void set_lmr(bool enabled) { gLmrEnabled = enabled; }
     void set_aspiration(bool enabled) { gAspiration = enabled; }
     void set_history(bool enabled) { gHistory = enabled; }
+    void set_rfp(bool enabled) { gRfp = enabled; }
 } // namespace KnightLift

@@ -101,6 +101,7 @@ namespace KnightLift {
                                 << "option name Hash type spin default 16 min 1 max 4096\n"
                                 << "option name NullMove type check default true\n"
                                 << "option name LMR type check default true\n"
+                                << "option name RFP type check default true\n"
                                 << "option name Aspiration type check default true\n"
                                 << "option name History type check default true\nuciok";
                         send(text.str());
@@ -259,6 +260,8 @@ namespace KnightLift {
                     set_aspiration(value == "true");
                 } else if (name == "History") {
                     set_history(value == "true");
+                } else if (name == "RFP") {
+                    set_rfp(value == "true");
                 }
             }
 

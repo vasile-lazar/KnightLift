@@ -81,7 +81,7 @@ info depth 7 score cp 0 nodes 260149 hashfull 8 time 9 nps 28905444 pv a2a3
 info depth 8 score cp 0 nodes 1052459 hashfull 35 time 63 nps 16705698 pv a2a3
 bestmove a2a3
 
-## 4b vs 4c vs 4d bench on depth 7
+## bench on depth 7
 
 4b: 1,241,734,355 nodes in 108 seconds
 4c: 21,843,147 nodes in 1.1 seconds
@@ -98,6 +98,7 @@ bestmove a2a3
 6c: 1,318,842 nodes in 0.2 seconds
 6d, 6e, 6f, 6g: 1,368,691 nodes in 0.2 seconds
 6h: 995,161 nodes in 0.13 seconds
+6i: 518,166 nodes in 0.08 seconds
 
 | 	            | history off         | 	history on          |
 |--------------|---------------------|----------------------|

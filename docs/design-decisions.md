@@ -453,6 +453,15 @@ which alternatives existed, and why.
 - Rejected alternatives: delta pruning (separate step, to be measured alone), SEE threshold above 0.
 - Measurement method: bench 7 and bench 8 (Release, depth written next to each) against 6g: 1,368,691 and 2,741,414. Unit tests for see_ge on hand-made positions (equal trade, losing capture, x-ray battery, pinned-attacker case documented as ignored). Strength: timed SPRT, 6h vs 6g (new first). The node count changes, so bench alone says nothing about strength.
 
+## 6i: Reverse futility pruning
+
+- Decision: in alphabeta(), at non-PV nodes (beta - alpha == 1) with depth <= 6, not in check, and beta not a mate score, if the static eval minus 80 * depth is at least beta, the node returns the static eval without searching. The static eval is now computed once per node (when not in check) and shared with the null move condition. A UCI check option RFP (default true) switches it off for ablation.
+- Where it applies: search_iterative only, like null move, LMR and the TT, so the minimax equivalence tests stay valid.
+- Motivation: at shallow depth, a position that is already far above beta by static eval almost always fails high anyway. The null move saved only 1.36-1.51x after PVS and LMR (6f), so another cheap pruning of the same kind is the next candidate for shrinking the tree.
+- Limitations: the margin 80 * depth is a common value, untuned, and the static eval ignores tactics (a quiet-looking position with a hanging piece can be wrongly pruned). Returns the static eval (fail-soft). Not applied when in check or in PV nodes.
+- Rejected alternatives: forward futility pruning of individual moves (separate step), margin tuning (postponed).
+- Measurement method: with RFP off, bench 7 and bench 8 must equal 6h (995,161 and 2,096,444, depth written next to each), which verifies the shared eval refactor. With RFP on, node counts change; strength by timed SPRT, 6i vs 6h (new first), and the same-exe ablation if the result is unclear.
+
 
 
 
