@@ -99,7 +99,7 @@ bestmove a2a3
 6d, 6e, 6f, 6g: 1,368,691 nodes in 0.2 seconds
 6h: 995,161 nodes in 0.13 seconds
 6i: 518,166 nodes in 0.08 seconds
-6j: 334,865 nodes in 0.07 seconds
+6j, 6k: 334,865 nodes in 0.07 seconds
 
 
 
@@ -256,6 +256,12 @@ bestmove a2a3
 - Futility on: bench 7 (depth 7) 518,166 -> 334,865 nodes (0.646x, 35% fewer), bench 8 (depth 8) 1,039,981 -> 665,371 nodes (0.640x, 36% fewer).
 - Match: tc 8+0.08, Hash 16, concurrency 6, book 8moves_v3.pgn, SPRT elo0=0 elo1=10 alpha=beta=0.05. 6j vs 6i: 112-88-204 over 404 games, +20.7 +/- 23.8, LOS 95.5%, draw ratio 50.5%, llr 1.06 (bounds -2.94 / 2.94), no bound reached. Stopped manually, 6 unfinished games discarded.
 - Result: inconclusive. Merged on the same grounds as 4g and 6d (positive estimate, LOS about 96%, standard technique). Margin 100 * depth and depth limit 3 untuned; ablation with tools\run_ablation 6j Futility possible.
+
+## 6k: tunable search parameters (verification)
+
+- Commit: <6k commit hash>, GCC (CLion bundled MinGW), Release, C++20, -march=native.
+- Defaults (RFPMargin 80, FutilityMargin 100, NullBase 2, AspDelta 25): bench 7 (depth 7) 334,865 and bench 8 (depth 8) 665,371 nodes, equal to 6j.
+- Conclusion: the options reproduce the previous build exactly, so parameter tests can run on one exe. Tuning results follow in separate entries, one per tested value.
 
 
 

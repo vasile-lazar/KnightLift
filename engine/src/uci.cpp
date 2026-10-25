@@ -104,7 +104,11 @@ namespace KnightLift {
                                 << "option name RFP type check default true\n"
                                 << "option name Futility type check default true\n"
                                 << "option name Aspiration type check default true\n"
-                                << "option name History type check default true\nuciok";
+                                << "option name History type check default true\n"
+                                << "option name RFPMargin type spin default 80 min 0 max 400\n"
+                                << "option name FutilityMargin type spin default 100 min 0 max 400\n"
+                                << "option name NullBase type spin default 2 min 1 max 4\n"
+                                << "option name AspDelta type spin default 25 min 5 max 200\nuciok";
                         send(text.str());
                     } else if (command == "isready") {
                         send("readyok");
@@ -265,6 +269,11 @@ namespace KnightLift {
                     set_rfp(value == "true");
                 } else if (name == "Futility") {
                     set_futility(value == "true");
+                } else {
+                    try {
+                        set_search_param(name, std::stoi(value));
+                    } catch (...) {
+                    } // unknown option or malformed value: ignore
                 }
             }
 

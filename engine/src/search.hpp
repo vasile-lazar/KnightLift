@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <functional>
 #include <cstddef>
+#include <string_view>
 
 #include "move.hpp"
 #include "position.hpp"
@@ -67,4 +68,6 @@ namespace KnightLift
     void set_history(bool enabled);
     void set_rfp(bool enabled);
     void set_futility(bool enabled);
+    // Sets a tunable search parameter by its UCI option name. Returns false for unknown names.
+    bool set_search_param(std::string_view name, int value);
 } // namespace KnightLift

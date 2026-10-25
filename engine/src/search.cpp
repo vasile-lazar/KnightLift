@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cstdlib>
 #include <cmath>
+#include <string_view>
 
 #include "eval.hpp"
 #include "movegen.hpp"
@@ -76,6 +77,14 @@ namespace KnightLift {
         };
 
         const LmrTable gLmr;
+
+        struct SearchParams {
+            int rfpMargin = 80;
+            int futilityMargin = 100;
+            int nullBase = 2;
+            int aspDelta = 25;
+        };
+        SearchParams gParams;
 
         class Searcher {
         public:
@@ -208,12 +217,12 @@ namespace KnightLift {
                                             pos_.pieces(us, PieceType::King));
                 if (rfp_ && depth <= 6 && nonPv && !inCheck &&
                     beta < kMateBound && beta > -kMateBound &&
-                    staticEval - 80 * depth >= beta) {
+                    staticEval - gParams.rfpMargin * depth >= beta) {
                     return staticEval;
                 }
                 if (nullMove_ && allowNull && depth >= 3 && nonPawnMaterial != 0 &&
                     !inCheck && staticEval >= beta) {
-                    const int nullDepth = depth - 1 - (2 + depth / 6);
+                    const int nullDepth = depth - 1 - (gParams.nullBase + depth / 6);
                     pos_.make_null_move();
                     const int nullScore = nullDepth <= 0
                                               ? -quiescence(-beta, -beta + 1, true)
@@ -238,7 +247,7 @@ namespace KnightLift {
                 Move bestMove = Move::none();
                 bool hasLegalMove = false;
                 int legalCount = 0;
-                const int futilityValue = staticEval + 100 * depth;
+                const int futilityValue = staticEval + gParams.futilityMargin * depth;
                 const bool futile = futility_ && nonPv && depth <= 3 && !inCheck &&
                                     alpha > -kMateBound && futilityValue <= alpha;
                 for (std::size_t i = 0; i < list.size(); ++i) {
@@ -511,7 +520,7 @@ namespace KnightLift {
             if (!gAspiration || depth < 5 || best.best.is_none()) {
                 r = searcher.search_root(depth, best.best, true);
             } else {
-                int delta = 25;
+                int delta = gParams.aspDelta;
                 int alpha = best.score - delta;
                 int beta = best.score + delta;
                 Move first = best.best;
@@ -559,4 +568,12 @@ namespace KnightLift {
     void set_history(bool enabled) { gHistory = enabled; }
     void set_rfp(bool enabled) { gRfp = enabled; }
     void set_futility(bool enabled) { gFutility = enabled; }
+    bool set_search_param(std::string_view name, int value) {
+        if (name == "RFPMargin") gParams.rfpMargin = std::clamp(value, 0, 400);
+        else if (name == "FutilityMargin") gParams.futilityMargin = std::clamp(value, 0, 400);
+        else if (name == "NullBase") gParams.nullBase = std::clamp(value, 1, 4);
+        else if (name == "AspDelta") gParams.aspDelta = std::clamp(value, 5, 200);
+        else return false;
+        return true;
+    }
 } // namespace KnightLift
