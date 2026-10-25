@@ -99,6 +99,9 @@ bestmove a2a3
 6d, 6e, 6f, 6g: 1,368,691 nodes in 0.2 seconds
 6h: 995,161 nodes in 0.13 seconds
 6i: 518,166 nodes in 0.08 seconds
+6j: 334,865 nodes in 0.07 seconds
+
+
 
 | 	            | history off         | 	history on          |
 |--------------|---------------------|----------------------|
@@ -245,6 +248,14 @@ bestmove a2a3
 - RFP on: bench 7 (depth 7) 995,161 -> 518,166 nodes (0.521x, 48% fewer), bench 8 (depth 8) 2,096,444 -> 1,039,981 nodes (0.496x, 50% fewer).
 - Match: tc 8+0.08, Hash 16, concurrency 6, book 8moves_v3.pgn, SPRT elo0=0 elo1=10 alpha=beta=0.05. 6i vs 6h: 70-20-82 over 172 games, +104.0 +/- 37.7, LOS 100.0%, draw ratio 47.7%, llr 2.95, H1 accepted. 5 unfinished games discarded.
 - Caveat: SPRT stopped at 172 games, so the point estimate is likely inflated (lower bound about +65). Margin 80 * depth and the depth limit 6 are untuned. A same-exe ablation (option RFP on vs off) is possible with tools\run_ablation 6i RFP.
+
+## 6j: forward futility pruning vs 6i
+
+- Commit: <6j commit hash>, GCC (CLion bundled MinGW), Release, C++20, -march=native.
+- Refactor check (Futility off): bench 7 (depth 7) 518,166 and bench 8 (depth 8) 1,039,981 nodes, equal to 6i.
+- Futility on: bench 7 (depth 7) 518,166 -> 334,865 nodes (0.646x, 35% fewer), bench 8 (depth 8) 1,039,981 -> 665,371 nodes (0.640x, 36% fewer).
+- Match: tc 8+0.08, Hash 16, concurrency 6, book 8moves_v3.pgn, SPRT elo0=0 elo1=10 alpha=beta=0.05. 6j vs 6i: 112-88-204 over 404 games, +20.7 +/- 23.8, LOS 95.5%, draw ratio 50.5%, llr 1.06 (bounds -2.94 / 2.94), no bound reached. Stopped manually, 6 unfinished games discarded.
+- Result: inconclusive. Merged on the same grounds as 4g and 6d (positive estimate, LOS about 96%, standard technique). Margin 100 * depth and depth limit 3 untuned; ablation with tools\run_ablation 6j Futility possible.
 
 
 

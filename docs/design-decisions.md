@@ -462,6 +462,15 @@ which alternatives existed, and why.
 - Rejected alternatives: forward futility pruning of individual moves (separate step), margin tuning (postponed).
 - Measurement method: with RFP off, bench 7 and bench 8 must equal 6h (995,161 and 2,096,444, depth written next to each), which verifies the shared eval refactor. With RFP on, node counts change; strength by timed SPRT, 6i vs 6h (new first), and the same-exe ablation if the result is unclear.
 
+## 6j: Futility pruning
+
+- Decision: in alphabeta(), at non-PV nodes (beta - alpha == 1) with depth <= 3, not in check, and alpha not a mate score, let futilityValue = static eval + 100 * depth. If futilityValue <= alpha, quiet moves after the first legal move are skipped when they do not give check. If any move is skipped, best is raised to at least futilityValue, so the stored TT bound and the returned fail-soft value stay consistent. A UCI check option Futility (default true) switches it off for ablation.
+- Where it applies: search_iterative only, like RFP, null move and LMR.
+- Motivation: RFP prunes nodes whose eval is far above beta. Futility is the mirror case: near the leaves, a quiet move rarely lifts a position that is far below alpha. After PVS, LMR, SEE and RFP the tree is still dominated by shallow nodes in non-PV lines.
+- Limitations: the margin 100 * depth and the depth limit 3 are common values, untuned. Quiet moves that create threats without giving check (a pawn push attacking a queen) can be wrongly skipped. Skipped moves do not increase the legal move count used by LMR.
+- Rejected alternatives: pruning captures (covered by SEE in quiescence), margin tuning (planned as its own step with UCI spin options).
+- Measurement method: with Futility off, bench 7 and bench 8 must equal 6i (518,166 and 1,039,981, depth written next to each). With Futility on, node counts change; strength by timed SPRT, 6j vs 6i (new first), plus a same-exe ablation if the result is unclear.
+
 
 
 

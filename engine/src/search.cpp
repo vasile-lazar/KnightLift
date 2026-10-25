@@ -19,6 +19,7 @@ namespace KnightLift {
         bool gAspiration = true;
         bool gHistory = true;
         bool gRfp = true;
+        bool gFutility = true;
         constexpr int kHistoryMax = 16384;
         using HistoryTable = std::array<std::array<int, kNumSquares>, kNumSquares>;
 
@@ -66,12 +67,14 @@ namespace KnightLift {
 
         struct LmrTable {
             std::array<std::array<int, 64>, 64> r{};
+
             LmrTable() {
                 for (int d = 1; d < 64; ++d)
                     for (int m = 1; m < 64; ++m)
                         r[d][m] = static_cast<int>(0.75 + std::log(d) * std::log(m) / 2.25);
             }
         };
+
         const LmrTable gLmr;
 
         class Searcher {
@@ -175,7 +178,7 @@ namespace KnightLift {
                     if (pos_.is_repetition(ply) || pos_.insufficient_material() ||
                         (pos_.halfmove_clock() >= 100 && !pos_.in_check())) {
                         return 0;
-                        }
+                    }
                 }
                 if (depth <= 0) return quiescence(alpha, beta, true);
 
@@ -199,14 +202,15 @@ namespace KnightLift {
                 const Color us = pos_.side_to_move();
                 const bool inCheck = pos_.in_check();
                 const int staticEval = inCheck ? 0 : evaluate(pos_);
+                const bool nonPv = beta - alpha == 1;
                 const Bitboard nonPawnMaterial =
                         pos_.pieces(us) & ~(pos_.pieces(us, PieceType::Pawn) |
                                             pos_.pieces(us, PieceType::King));
-                if (rfp_ && depth <= 6 && beta - alpha == 1 && !inCheck &&
-    beta < kMateBound && beta > -kMateBound &&
-    staticEval - 80 * depth >= beta) {
+                if (rfp_ && depth <= 6 && nonPv && !inCheck &&
+                    beta < kMateBound && beta > -kMateBound &&
+                    staticEval - 80 * depth >= beta) {
                     return staticEval;
-    }
+                }
                 if (nullMove_ && allowNull && depth >= 3 && nonPawnMaterial != 0 &&
                     !inCheck && staticEval >= beta) {
                     const int nullDepth = depth - 1 - (2 + depth / 6);
@@ -217,7 +221,7 @@ namespace KnightLift {
                     pos_.unmake_null_move();
                     if (aborted_) return 0;
                     if (nullScore >= beta) return nullScore > kMateBound ? beta : nullScore;
-                    }
+                }
 
                 MoveList list;
                 generate_pseudo_legal(pos_, list);
@@ -234,6 +238,9 @@ namespace KnightLift {
                 Move bestMove = Move::none();
                 bool hasLegalMove = false;
                 int legalCount = 0;
+                const int futilityValue = staticEval + 100 * depth;
+                const bool futile = futility_ && nonPv && depth <= 3 && !inCheck &&
+                                    alpha > -kMateBound && futilityValue <= alpha;
                 for (std::size_t i = 0; i < list.size(); ++i) {
                     pick_best(list, scores, i);
                     const Move m = list[i];
@@ -241,6 +248,11 @@ namespace KnightLift {
                     pos_.make_move(m);
                     if (pos_.king_left_in_check()) {
                         pos_.unmake_move(m);
+                        continue;
+                    }
+                    if (futile && quiet && legalCount > 0 && !pos_.in_check()) {
+                        pos_.unmake_move(m);
+                        if (best < futilityValue) best = futilityValue;
                         continue;
                     }
                     int score;
@@ -252,7 +264,7 @@ namespace KnightLift {
                             !pos_.in_check()) {
                             reduction = std::min(gLmr.r[std::min(depth, 63)][std::min(legalCount, 63)],
                                                  depth - 2);
-                            }
+                        }
                         score = -alphabeta(depth - 1 - reduction, ply + 1, -alpha - 1, -alpha);
                         if (!aborted_ && reduction > 0 && score > alpha)
                             score = -alphabeta(depth - 1, ply + 1, -alpha - 1, -alpha);
@@ -300,7 +312,7 @@ namespace KnightLift {
 
             // `first` (if not none) is searched first, e.g. the best move of the previous iteration.
             SearchResult search_root(int depth, Move first, bool useAlphaBeta,
-                         int alpha = -kInfinity, int beta = kInfinity) {
+                                     int alpha = -kInfinity, int beta = kInfinity) {
                 MoveList list;
                 bool searchedAny = false;
                 const Color us = pos_.side_to_move();
@@ -351,9 +363,11 @@ namespace KnightLift {
                 if (result.best.is_none()) {
                     result.score = pos_.in_check() ? -kMateScore : 0;
                 } else if (tt_ != nullptr) {
-                    const Bound bound = result.score >= beta ? Bound::Lower
-                                        : result.score <= alpha ? Bound::Upper
-                                                                : Bound::Exact;
+                    const Bound bound = result.score >= beta
+                                            ? Bound::Lower
+                                            : result.score <= alpha
+                                                  ? Bound::Upper
+                                                  : Bound::Exact;
                     tt_->store(pos_.key(), bound == Bound::Upper ? Move::none() : result.best,
                                score_to_tt(result.score, 0), depth, bound);
                 }
@@ -366,6 +380,7 @@ namespace KnightLift {
             void enable_lmr(bool on) { lmr_ = on; }
             void enable_history(bool on) { historyOn_ = on; }
             void enable_rfp(bool on) { rfp_ = on; }
+            void enable_futility(bool on) { futility_ = on; }
         private:
             bool should_stop() const {
                 if (stop_ != nullptr && stop_->load(std::memory_order_relaxed)) return true;
@@ -398,6 +413,7 @@ namespace KnightLift {
             bool lmr_ = false;
             bool historyOn_ = true;
             bool rfp_ = false;
+            bool futility_ = false;
         };
     } // namespace
     bool see_ge(const Position &pos, Move m, int threshold) {
@@ -447,7 +463,7 @@ namespace KnightLift {
                 if ((swap = kValue[4] - swap) < res) break;
                 occ ^= bb & (~bb + 1);
                 attackers |= (bishop_attacks(to, occ) & bishopsQueens) |
-                             (rook_attacks(to, occ) & rooksQueens);
+                        (rook_attacks(to, occ) & rooksQueens);
             } else {
                 // King: it can only capture if the other side has no attacker left.
                 return (attackers & ~pos.pieces(stm)) ? (res ^ 1) != 0 : res != 0;
@@ -455,6 +471,7 @@ namespace KnightLift {
         }
         return res != 0;
     }
+
     void tt_resize(std::size_t megabytes) { gTT.resize(megabytes); }
     void tt_clear() { gTT.clear(); }
     int tt_hashfull() { return gTT.hashfull(); }
@@ -485,6 +502,7 @@ namespace KnightLift {
         searcher.enable_lmr(gLmrEnabled);
         searcher.enable_history(gHistory);
         searcher.enable_rfp(gRfp);
+        searcher.enable_futility(gFutility);
         searcher.enable_draw_detection(true);
         SearchResult best;
 
@@ -498,7 +516,10 @@ namespace KnightLift {
                 int beta = best.score + delta;
                 Move first = best.best;
                 for (;;) {
-                    if (delta > 1000) { alpha = -kInfinity; beta = kInfinity; }
+                    if (delta > 1000) {
+                        alpha = -kInfinity;
+                        beta = kInfinity;
+                    }
                     r = searcher.search_root(depth, first, true, alpha, beta);
                     if (searcher.aborted()) break;
                     if (r.score <= alpha && alpha > -kInfinity) {
@@ -537,4 +558,5 @@ namespace KnightLift {
     void set_aspiration(bool enabled) { gAspiration = enabled; }
     void set_history(bool enabled) { gHistory = enabled; }
     void set_rfp(bool enabled) { gRfp = enabled; }
+    void set_futility(bool enabled) { gFutility = enabled; }
 } // namespace KnightLift
