@@ -238,5 +238,13 @@ bestmove a2a3
 - Early partial match (stopped, not used for a decision): 6h vs 6g 29-31-41 over 101 games, -6.9 +/- 52.6, llr -0.17, 6 unfinished games.
 - Match: tc 8+0.08, Hash 16, concurrency 6, book 8moves_v3.pgn, SPRT elo0=0 elo1=10 alpha=beta=0.05. 6h vs 6g: <W-L-D, games, Elo +/- error, LOS, llr, outcome>.
 
+## 6i: reverse futility pruning vs 6h
+
+- Commit: <6i commit hash>, GCC (CLion bundled MinGW), Release, C++20, -march=native.
+- Refactor check (RFP off): bench 7 (depth 7) 995,161 and bench 8 (depth 8) 2,096,444 nodes, equal to 6h.
+- RFP on: bench 7 (depth 7) 995,161 -> 518,166 nodes (0.521x, 48% fewer), bench 8 (depth 8) 2,096,444 -> 1,039,981 nodes (0.496x, 50% fewer).
+- Match: tc 8+0.08, Hash 16, concurrency 6, book 8moves_v3.pgn, SPRT elo0=0 elo1=10 alpha=beta=0.05. 6i vs 6h: 70-20-82 over 172 games, +104.0 +/- 37.7, LOS 100.0%, draw ratio 47.7%, llr 2.95, H1 accepted. 5 unfinished games discarded.
+- Caveat: SPRT stopped at 172 games, so the point estimate is likely inflated (lower bound about +65). Margin 80 * depth and the depth limit 6 are untuned. A same-exe ablation (option RFP on vs off) is possible with tools\run_ablation 6i RFP.
+
 
 
