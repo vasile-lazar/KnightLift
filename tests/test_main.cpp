@@ -704,6 +704,44 @@ namespace {
             check(!see_ge(pos, m, c.value + 1), "see < expected + 1: " + what);
         }
     }
+    void test_pv() {
+        constexpr std::string_view fens[] = {
+            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+            "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
+            "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1",
+            "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8",
+        };
+
+        for (const std::string_view fen: fens) {
+            Position pos;
+            pos.set_from_fen(fen);
+            const Position root = pos;
+
+            SearchLimits limits;
+            limits.maxDepth = 6;
+            std::atomic<bool> stop{false};
+
+            bool ok = true;
+            bool any = false;
+            search_iterative(pos, limits, stop, [&](const SearchInfo &info) {
+                any = true;
+                ok = ok && !info.pv.empty() && info.pv[0] == info.best;
+                Position p = root;
+                for (const Move m: info.pv) {
+                    MoveList legal;
+                    generate_legal(p, legal);
+                    bool found = false;
+                    for (const Move x: legal) found = found || (x == m);
+                    if (!found) {
+                        ok = false;
+                        break;
+                    }
+                    p.make_move(m);
+                }
+            });
+            check(any && ok, "pv is a legal line starting with the best move: " + std::string(fen));
+        }
+    }
 } // namespace
 
 int main() {
@@ -725,6 +763,7 @@ int main() {
     test_tt();
     test_capture_generator();
     test_see();
+    test_pv();
 
     std::cout << (gFailures == 0 ? "ALL TESTS PASSED" : "TESTS FAILED") << '\n';
     return gFailures == 0 ? 0 : 1;

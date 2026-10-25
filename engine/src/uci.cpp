@@ -239,7 +239,12 @@ namespace KnightLift {
                 if (info.timeMs > 0) {
                     line << " nps " << info.nodes * 1000 / static_cast<std::uint64_t>(info.timeMs);
                 }
-                line << " pv " << move_to_uci(info.best);
+                line << " pv";
+                if (info.pv.empty()) {
+                    line << ' ' << move_to_uci(info.best);
+                } else {
+                    for (const Move m: info.pv) line << ' ' << move_to_uci(m);
+                }
                 send(line.str());
             }
 

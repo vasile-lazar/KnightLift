@@ -180,6 +180,7 @@ namespace KnightLift {
             }
 
             int alphabeta(int depth, int ply, int alpha, int beta, bool allowNull = true) {
+                pvLen_[ply] = ply;
                 ++nodes_;
                 if (checkStop_ && (nodes_ & 2047) == 0 && should_stop()) aborted_ = true;
                 if (aborted_) return 0;
@@ -288,7 +289,10 @@ namespace KnightLift {
                     if (score > best) {
                         best = score;
                         bestMove = m;
-                        if (score > alpha) alpha = score;
+                        if (score > alpha) {
+                            alpha = score;
+                            update_pv(ply, m);
+                        }
                     }
                     if (alpha >= beta) {
                         if (quiet) {
@@ -340,6 +344,7 @@ namespace KnightLift {
 
                 SearchResult result;
                 result.score = -kInfinity;
+                pvLen_[0] = 0;
                 for (std::size_t i = 0; i < list.size(); ++i) {
                     pick_best(list, scores, i);
                     const Move m = list[i];
@@ -366,6 +371,7 @@ namespace KnightLift {
                     if (score > result.score) {
                         result.score = score;
                         result.best = m;
+                        update_pv(0, m);
                     }
                 }
 
@@ -380,6 +386,8 @@ namespace KnightLift {
                     tt_->store(pos_.key(), bound == Bound::Upper ? Move::none() : result.best,
                                score_to_tt(result.score, 0), depth, bound);
                 }
+                result.pvLength = pvLen_[0];
+                for (int i = 0; i < pvLen_[0]; ++i) result.pv[i] = pv_[0][i];
                 result.nodes = nodes_;
                 return result;
             }
@@ -407,6 +415,13 @@ namespace KnightLift {
                 h += bonus - h * std::abs(bonus) / kHistoryMax;
             }
 
+            void update_pv(int ply, Move m) {
+                pv_[ply][ply] = m;
+                int n = ply + 1;
+                for (int i = ply + 1; i < pvLen_[ply + 1]; ++i) pv_[ply][n++] = pv_[ply + 1][i];
+                pvLen_[ply] = n;
+            }
+
             Position &pos_;
             const SearchLimits *limits_;
             const std::atomic<bool> *stop_;
@@ -416,6 +431,8 @@ namespace KnightLift {
             bool aborted_ = false;
             bool checkStop_ = false;
             std::array<std::array<Move, 2>, kMaxDepth + 2> killers_{};
+            std::array<std::array<Move, kMaxDepth + 2>, kMaxDepth + 2> pv_{};
+            std::array<int, kMaxDepth + 2> pvLen_{};
             std::array<HistoryTable, kNumColors> history_{};
             bool nullMove_ = false;
             bool drawDetect_ = false;
@@ -548,7 +565,13 @@ namespace KnightLift {
             best = r;
             searcher.enable_stop_checks(); // depth 1 always completes
             if (onInfo) {
-                SearchInfo info{depth, r.score, searcher.nodes(), searcher.elapsed_ms(), r.best};
+                SearchInfo info;
+                info.depth = depth;
+                info.score = r.score;
+                info.nodes = searcher.nodes();
+                info.timeMs = searcher.elapsed_ms();
+                info.best = r.best;
+                info.pv.assign(r.pv.begin(), r.pv.begin() + r.pvLength);
                 info.hashfull = gTT.hashfull();
                 onInfo(info);
             }

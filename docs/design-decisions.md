@@ -480,6 +480,15 @@ which alternatives existed, and why.
 - Rejected alternatives: automatic tuning (SPSA) in this step, because it needs its own infrastructure and a long run; it stays on the postponed list.
 - Measurement method: with defaults, bench 7 and bench 8 must equal 6j (334,865 and 665,371, depth written next to each). Tuning runs: timed SPRT, one parameter at a time, candidate against default on the same exe. A flat result keeps the default and is recorded as such.
 
+## 6m: Principal variation in UCI info
+
+- Decision: a triangular PV table in Searcher (pv_[ply][i] and pvLen_[ply]). alphabeta() resets pvLen_[ply] at entry; when a move raises alpha, update_pv(ply, move) stores the move and appends the child's PV. search_root() does the same for the best root move and copies the result into SearchResult (array plus length). SearchInfo carries the PV as a vector, and the UCI info line prints all its moves.
+- Where it applies: all alphabeta nodes, so also fixed-depth search(). No quiescence PV.
+- Motivation: the web analysis platform (stage 9) and any GUI need the whole line, not only the first move. It is also useful for debugging search instability, such as the differing root moves seen in 6d.
+- Limitations: a TT cutoff or a draw return ends the line at that node, so the PV can be shorter than the searched depth. Quiescence moves are not included. The PV is only the line from the last completed iteration.
+- Rejected alternatives: reading the PV back from the TT after each iteration (simpler, but entries can be overwritten, which gives wrong or cut lines).
+- Measurement method: no behaviour change, so bench 7 (depth 7) and bench 8 (depth 8) must equal the previous totals, 334,865 and 665,371, and CI BENCH7 stays 334,865. A new test checks that each reported PV is a legal sequence of moves from the root and starts with the best move.
+
 
 
 
