@@ -263,5 +263,11 @@ bestmove a2a3
 - Defaults (RFPMargin 80, FutilityMargin 100, NullBase 2, AspDelta 25): bench 7 (depth 7) 334,865 and bench 8 (depth 8) 665,371 nodes, equal to 6j.
 - Conclusion: the options reproduce the previous build exactly, so parameter tests can run on one exe. Tuning results follow in separate entries, one per tested value.
 
+## 6l: CI portability check
+
+- First CI run: Linux GCC (software PEXT), Linux GCC (-mbmi2) and Linux Clang (-mbmi2): bench 7 (depth 7) 334,865 nodes, equal to the local MinGW build. Windows MSVC: 334,904 nodes. Positions 1, 7, 8 and 10 differed (40749, 46896, 44412, 31922 vs 40741, 46851, 44415, 31933), net +39.
+- Cause: TT index mapping differed between the 128-bit multiply-high path and the key % size fallback.
+- After the fix (commit <hash>): all four jobs print 334,865 nodes. The software and hardware PEXT paths also agree with each other.
+
 
 

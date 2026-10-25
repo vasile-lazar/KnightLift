@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  # Expected "bench 7" node total. Update it in every commit that changes search behaviour.
+  BENCH7: "334865"
+
+jobs:
+  build-test:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux GCC (software PEXT)
+            os: ubuntu-latest
+            cxx: g++
+            flags: ""
+          - name: Linux GCC (BMI2)
+            os: ubuntu-latest
+            cxx: g++
+            flags: "-mbmi2"
+          - name: Linux Clang (BMI2)
+            os: ubuntu-latest
+            cxx: clang++
+            flags: "-mbmi2"
+          - name: Windows MSVC (software PEXT)
+            os: windows-latest
+            cxx: ""
+            flags: ""
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        shell: bash
+        run: |
+          ARGS="-DCMAKE_BUILD_TYPE=Release -DKNIGHTLIFT_NATIVE=OFF"
+          if [ -n "${{ matrix.cxx }}" ]; then ARGS="$ARGS -DCMAKE_CXX_COMPILER=${{ matrix.cxx }}"; fi
+          if [ -n "${{ matrix.flags }}" ]; then ARGS="$ARGS -DCMAKE_CXX_FLAGS=${{ matrix.flags }}"; fi
+          cmake -S . -B build $ARGS
+
+      - name: Build
+        run: cmake --build build --config Release --parallel
+
+      - name: Test
+        run: ctest --test-dir build -C Release --output-on-failure
+
+      - name: Bench
+        shell: bash
+        run: |
+          BIN=$(find build -type f \( -name KnightLift -o -name KnightLift.exe \) | head -n1)
+          echo "Using $BIN"
+          OUT=$(printf 'bench 7\nquit\n' | "$BIN")
+          echo "$OUT"
+          echo "$OUT" | grep -q "Total nodes: $BENCH7"
