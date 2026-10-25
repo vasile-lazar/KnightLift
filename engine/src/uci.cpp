@@ -102,6 +102,7 @@ namespace KnightLift {
                                 << "option name NullMove type check default true\n"
                                 << "option name LMR type check default true\n"
                                 << "option name RFP type check default true\n"
+                                << "option name Futility type check default true\n"
                                 << "option name Aspiration type check default true\n"
                                 << "option name History type check default true\nuciok";
                         send(text.str());
@@ -262,6 +263,8 @@ namespace KnightLift {
                     set_history(value == "true");
                 } else if (name == "RFP") {
                     set_rfp(value == "true");
+                } else if (name == "Futility") {
+                    set_futility(value == "true");
                 }
             }
 
