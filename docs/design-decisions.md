@@ -471,6 +471,15 @@ which alternatives existed, and why.
 - Rejected alternatives: pruning captures (covered by SEE in quiescence), margin tuning (planned as its own step with UCI spin options).
 - Measurement method: with Futility off, bench 7 and bench 8 must equal 6i (518,166 and 1,039,981, depth written next to each). With Futility on, node counts change; strength by timed SPRT, 6j vs 6i (new first), plus a same-exe ablation if the result is unclear.
 
+## 6k: Tunable search parameters as UCI spin options
+
+- Decision: four constants become UCI spin options, held in a SearchParams struct in search.cpp and set through one function, set_search_param(name, value): RFPMargin (default 80, range 0-400), FutilityMargin (default 100, 0-400), NullBase (default 2, 1-4, the constant in R = NullBase + depth / 6), AspDelta (default 25, 5-200). tools/run_param.bat plays one exe against itself with two values of one option, the new value first.
+- Where it applies: the same code paths as before (search_iterative only for RFP, futility, null move and aspiration).
+- Motivation: the margins were taken from common practice and never measured here. With options, each candidate value is a cutechess option on the same exe, with no rebuild and no stale-exe risk, and the results are thesis material (the effect of each constant).
+- Limitations: values are read inside the search without synchronisation, which is safe because setoption stops any running search first. An SPRT at 8+0.08 resolves only differences of roughly 15-20 Elo after several hundred games, so small changes in a margin will not be separable from noise. LMR constants are not included, since they feed a table that would have to be rebuilt on every change.
+- Rejected alternatives: automatic tuning (SPSA) in this step, because it needs its own infrastructure and a long run; it stays on the postponed list.
+- Measurement method: with defaults, bench 7 and bench 8 must equal 6j (334,865 and 665,371, depth written next to each). Tuning runs: timed SPRT, one parameter at a time, candidate against default on the same exe. A flat result keeps the default and is recorded as such.
+
 
 
 
