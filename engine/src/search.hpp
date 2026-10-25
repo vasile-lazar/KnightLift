@@ -47,6 +47,10 @@ namespace KnightLift
     int quiescence_score(Position &pos);
     bool quiescence_score_within(Position &pos, int maxMs, int &score);
 
+    // Static exchange evaluation: true if the exchange started by m on its target square
+    // gains at least `threshold` centipawns. Ignores pins. Promotions and en passant count as 0.
+    bool see_ge(const Position &pos, Move m, int threshold);
+
     // Iterative deepening with time limits; stops when `stop` becomes true.
     // Calls onInfo (if set) after every completed depth.
     SearchResult search_iterative(Position& pos, const SearchLimits& limits,

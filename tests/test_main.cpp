@@ -669,7 +669,41 @@ namespace {
             }
         }
     }
+    void test_see() {
+        struct Case {
+            std::string_view fen;
+            std::string_view move;
+            int value;
+        };
+        const Case cases[] = {
+            // Rook takes an undefended pawn.
+            {"1k1r4/1pp4p/p7/4p3/8/P5P1/1PP4P/2K1R3 w - - 0 1", "e1e5", 100},
+            // Knight takes a pawn defended by knight and bishop: stops after the first exchange.
+            {"1k1r3q/1ppn3p/p4b2/4p3/8/P2N2P1/1PP1R1BP/2K1Q3 w - - 0 1", "d3e5", -225},
+            // Rook takes a pawn defended by a pawn.
+            {"4k3/8/4p3/3p4/8/8/3R4/4K3 w - - 0 1", "d2d5", -400},
+            // Queen takes a pawn defended by a pawn.
+            {"4k3/8/4p3/3p4/8/8/3Q4/4K3 w - - 0 1", "d2d5", -875},
+            // Battery: the second rook behind the first recaptures (x-ray).
+            {"3rk3/8/8/3p4/8/8/3R4/3RK3 w - - 0 1", "d2d5", 100},
+        };
 
+        Position pos;
+        for (const Case &c: cases) {
+            pos.set_from_fen(c.fen);
+            MoveList legal;
+            generate_legal(pos, legal);
+            Move m = Move::none();
+            for (const Move x: legal) {
+                if (move_to_uci(x) == c.move) m = x;
+            }
+            const std::string what = std::string(c.fen) + " " + std::string(c.move);
+            check(!m.is_none(), "see test move exists: " + what);
+            if (m.is_none()) continue;
+            check(see_ge(pos, m, c.value), "see >= expected: " + what);
+            check(!see_ge(pos, m, c.value + 1), "see < expected + 1: " + what);
+        }
+    }
 } // namespace
 
 int main() {
@@ -690,6 +724,7 @@ int main() {
     test_draws();
     test_tt();
     test_capture_generator();
+    test_see();
 
     std::cout << (gFailures == 0 ? "ALL TESTS PASSED" : "TESTS FAILED") << '\n';
     return gFailures == 0 ? 0 : 1;

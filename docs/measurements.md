@@ -96,8 +96,8 @@ bestmove a2a3
 5e: 7,562,799 nodes in 1.2 seconds
 6b: 5,057,085 nodes in 0.55 seconds
 6c: 1,318,842 nodes in 0.2 seconds
-6d, 6e, 6f: 1,368,691 nodes in 0.2 seconds
-
+6d, 6e, 6f, 6g: 1,368,691 nodes in 0.2 seconds
+6h: 995,161 nodes in 0.13 seconds
 
 | 	            | history off         | 	history on          |
 |--------------|---------------------|----------------------|
@@ -228,6 +228,14 @@ bestmove a2a3
 - Commit: <6g commit hash>, GCC (CLion bundled MinGW), Release, C++20, -march=native.
 - Bench 7 (depth 7): 1,368,691 nodes and bench 8 (depth 8): 2,741,414 nodes, identical to 6d/6e/6f, as required for a change with no behaviour change. The new test (capture list equals the filtered full list, in the same order, on the root and all children of six FENs) passes.
 - Speed: not measured. Timings were taken on a machine with other processes running and were discarded as too noisy, so no speedup is claimed. The motivation (qsearch skips generating and filtering quiet moves) is a design argument here, not a measured result.
+
+## 6h: SEE pruning in quiescence vs 6g
+
+- Commit: <6h commit hash>, GCC (CLion bundled MinGW), Release, C++20, -march=native.
+- Bench 7 (depth 7): 1,368,691 -> 995,161 nodes (0.727x, 27% fewer).
+- Bench 8 (depth 8): 2,741,414 -> 2,096,444 nodes (0.765x, 24% fewer).
+- Early partial match (stopped, not used for a decision): 6h vs 6g 29-31-41 over 101 games, -6.9 +/- 52.6, llr -0.17, 6 unfinished games.
+- Match: tc 8+0.08, Hash 16, concurrency 6, book 8moves_v3.pgn, SPRT elo0=0 elo1=10 alpha=beta=0.05. 6h vs 6g: <W-L-D, games, Elo +/- error, LOS, llr, outcome>.
 
 
 

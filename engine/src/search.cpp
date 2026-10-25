@@ -9,6 +9,8 @@
 #include "movegen.hpp"
 #include "tt.hpp"
 #include "search.hpp"
+#include "attacks.hpp"
+
 namespace KnightLift {
     namespace {
         TranspositionTable gTT(16);
@@ -117,6 +119,7 @@ namespace KnightLift {
                     std::swap(scores[i], scores[top]);
                     captures.swap(i, top);
                     const Move m = captures[i];
+                    if (prune && !see_ge(pos_, m, 0)) continue;
 
                     pos_.make_move(m);
                     if (pos_.king_left_in_check()) {
@@ -388,7 +391,61 @@ namespace KnightLift {
             bool historyOn_ = true;
         };
     } // namespace
+    bool see_ge(const Position &pos, Move m, int threshold) {
+        if (m.is_promotion() || m.flag() == MoveFlag::EnPassant) return 0 >= threshold;
 
+        constexpr int kValue[] = {100, 325, 325, 500, 975, 20000}; // P N B R Q K
+
+        const Square from = m.from();
+        const Square to = m.to();
+
+        int swap = (m.is_capture() ? kValue[to_index(type_of(pos.piece_on(to)))] : 0) - threshold;
+        if (swap < 0) return false;
+        swap = kValue[to_index(type_of(pos.piece_on(from)))] - swap;
+        if (swap <= 0) return true;
+
+        Bitboard occ = pos.occupied() ^ square_bb(from) ^ square_bb(to);
+        Color stm = pos.side_to_move();
+        Bitboard attackers = pos.attackers_to(to, occ);
+        const Bitboard bishopsQueens = pos.pieces(PieceType::Bishop) | pos.pieces(PieceType::Queen);
+        const Bitboard rooksQueens = pos.pieces(PieceType::Rook) | pos.pieces(PieceType::Queen);
+        int res = 1;
+
+        while (true) {
+            stm = ~stm;
+            attackers &= occ;
+            const Bitboard stmAttackers = attackers & pos.pieces(stm);
+            if (!stmAttackers) break;
+            res ^= 1;
+
+            Bitboard bb;
+            if ((bb = stmAttackers & pos.pieces(PieceType::Pawn))) {
+                if ((swap = kValue[0] - swap) < res) break;
+                occ ^= bb & (~bb + 1);
+                attackers |= bishop_attacks(to, occ) & bishopsQueens;
+            } else if ((bb = stmAttackers & pos.pieces(PieceType::Knight))) {
+                if ((swap = kValue[1] - swap) < res) break;
+                occ ^= bb & (~bb + 1);
+            } else if ((bb = stmAttackers & pos.pieces(PieceType::Bishop))) {
+                if ((swap = kValue[2] - swap) < res) break;
+                occ ^= bb & (~bb + 1);
+                attackers |= bishop_attacks(to, occ) & bishopsQueens;
+            } else if ((bb = stmAttackers & pos.pieces(PieceType::Rook))) {
+                if ((swap = kValue[3] - swap) < res) break;
+                occ ^= bb & (~bb + 1);
+                attackers |= rook_attacks(to, occ) & rooksQueens;
+            } else if ((bb = stmAttackers & pos.pieces(PieceType::Queen))) {
+                if ((swap = kValue[4] - swap) < res) break;
+                occ ^= bb & (~bb + 1);
+                attackers |= (bishop_attacks(to, occ) & bishopsQueens) |
+                             (rook_attacks(to, occ) & rooksQueens);
+            } else {
+                // King: it can only capture if the other side has no attacker left.
+                return (attackers & ~pos.pieces(stm)) ? (res ^ 1) != 0 : res != 0;
+            }
+        }
+        return res != 0;
+    }
     void tt_resize(std::size_t megabytes) { gTT.resize(megabytes); }
     void tt_clear() { gTT.clear(); }
     int tt_hashfull() { return gTT.hashfull(); }
