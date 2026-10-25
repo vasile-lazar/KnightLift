@@ -99,7 +99,7 @@ bestmove a2a3
 6d, 6e, 6f, 6g: 1,368,691 nodes in 0.2 seconds
 6h: 995,161 nodes in 0.13 seconds
 6i: 518,166 nodes in 0.08 seconds
-6j, 6k: 334,865 nodes in 0.07 seconds
+6j, 6k, 6l: 334,865 nodes in 0.07 seconds
 
 
 

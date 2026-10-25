@@ -21,6 +21,8 @@ namespace KnightLift
         Move best = Move::none();
         int score = 0;
         std::uint64_t nodes = 0;
+        std::array<Move, kMaxDepth + 1> pv{};
+        int pvLength = 0;
     };
 
     struct SearchLimits
@@ -38,6 +40,7 @@ namespace KnightLift
         std::int64_t timeMs = 0;
         Move best = Move::none();
         int hashfull = 0;
+        std::vector<Move> pv;
     };
 
     using InfoCallback = std::function<void(const SearchInfo&)>;
