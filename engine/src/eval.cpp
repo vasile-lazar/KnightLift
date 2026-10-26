@@ -6,12 +6,13 @@
 #include "attacks.hpp"
 #include "eval_tables.hpp"
 #include "eval_params.hpp"
+#include "nnue.hpp"
 
 namespace KnightLift {
     namespace {
 
         // ---- Pawn structure (5b) ------------------------------------------------
-
+        constexpr int kNnueLimit = 20000;
         constexpr int kDoubledMg = -10, kDoubledEg = -20;
         constexpr int kIsolatedMg = -10, kIsolatedEg = -15;
         // Indexed by rank from the pawn owner's point of view (0 = own back rank).
@@ -179,6 +180,10 @@ namespace KnightLift {
     }
 
     int evaluate(const Position &pos) {
+        if (Nnue::enabled()) {
+            return std::clamp(Nnue::evaluate(pos.accumulator(), pos.side_to_move()),
+                              -kNnueLimit, kNnueLimit);
+        }
         std::array<int, kNumColors> mg{};
         std::array<int, kNumColors> eg{};
 

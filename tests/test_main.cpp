@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <cctype>
 #include <vector>
+#include <fstream>
 
 #include "../engine/src/eval.hpp"
 #include "tt.hpp"
@@ -18,7 +19,7 @@
 #include "../engine/src/uci.hpp"
 #include "../engine/src/search.hpp"
 #include "../engine/src/eval_params.hpp"
-
+#include "../engine/src/nnue.hpp"
 using namespace KnightLift;
 
 namespace {
@@ -742,6 +743,72 @@ namespace {
             check(any && ok, "pv is a legal line starting with the best move: " + std::string(fen));
         }
     }
+    void nnue_walk(Position &pos, int depth, int &bad) {
+    if (!pos.consistent()) ++bad;
+    if (depth == 0) return;
+    MoveList legal;
+    generate_legal(pos, legal);
+    for (const Move m: legal) {
+        pos.make_move(m);
+        Position fresh;
+        fresh.set_from_fen(pos.to_fen());
+        if (Nnue::evaluate(pos.accumulator(), pos.side_to_move()) !=
+            Nnue::evaluate(fresh.accumulator(), fresh.side_to_move())) {
+            ++bad;
+        }
+        nnue_walk(pos, depth - 1, bad);
+        pos.unmake_move(m);
+        if (!pos.consistent()) ++bad;
+    }
+}
+
+void test_nnue() {
+    const std::string dir = "../../tests/data";
+    std::string error;
+    const bool loaded = Nnue::load(dir + "/nnue_v1.nnue", error);
+    check(loaded, "nnue network loads: " + error);
+    if (!loaded) return;
+    Nnue::set_use(true);
+    check(Nnue::enabled(), "nnue enabled after load");
+
+    // 1. Exact match with the Python integer reference.
+    std::ifstream in(dir + "/nnue_v1_golden.txt");
+    std::string line;
+    int count = 0;
+    int bad = 0;
+    Position pos;
+    while (std::getline(in, line)) {
+        const std::size_t sep = line.find(';');
+        if (sep == std::string::npos) continue;
+        const std::string fen = line.substr(0, sep);
+        const int expected = std::stoi(line.substr(sep + 1));
+        pos.set_from_fen(fen);
+        const int got = Nnue::evaluate(pos.accumulator(), pos.side_to_move());
+        if (got != expected && ++bad <= 3) {
+            std::cout << "nnue golden mismatch: " << fen << " expected " << expected
+                      << " got " << got << "\n";
+        }
+        ++count;
+    }
+    check(count >= 200 && bad == 0, "nnue matches golden vectors (" + std::to_string(count) + ")");
+
+    // 2. Incremental updates equal a fresh rebuild after every make and unmake.
+    constexpr std::string_view fens[] = {
+        "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+        "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1",
+        "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1",
+        "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1",
+        "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8",
+    };
+    int walkBad = 0;
+    for (const std::string_view fen: fens) {
+        pos.set_from_fen(fen);
+        nnue_walk(pos, 2, walkBad);
+    }
+    check(walkBad == 0, "nnue incremental equals refresh over depth-2 walks");
+
+    Nnue::set_use(false); // leave the global state as other tests expect it
+}
 } // namespace
 
 int main() {
@@ -764,6 +831,7 @@ int main() {
     test_capture_generator();
     test_see();
     test_pv();
+    test_nnue();
 
     std::cout << (gFailures == 0 ? "ALL TESTS PASSED" : "TESTS FAILED") << '\n';
     return gFailures == 0 ? 0 : 1;
