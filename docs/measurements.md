@@ -99,7 +99,7 @@ bestmove a2a3
 6d, 6e, 6f, 6g: 1,368,691 nodes in 0.2 seconds
 6h: 995,161 nodes in 0.13 seconds
 6i: 518,166 nodes in 0.08 seconds
-6j, 6k, 6l: 334,865 nodes in 0.07 seconds
+6j, 6k, 6l, 6m: 334,865 nodes in 0.07 seconds
 
 
 
@@ -269,5 +269,30 @@ bestmove a2a3
 - Cause: TT index mapping differed between the 128-bit multiply-high path and the key % size fallback.
 - After the fix (commit <hash>): all four jobs print 334,865 nodes. The software and hardware PEXT paths also agree with each other.
 
+## 7a/7b: NNUE data set v1
+
+- Source: lichess_db_eval.jsonl.zst, script tools/nnue_positions.py (commit <hash>), sample rate 0.2, min depth 20, max |cp| 1000, quiet filter (not in check, first move of the database line is not a capture or promotion), 40,000,000 positions kept in <time>.
+- Split: every 100th kept position is validation: 39,600,000 train, 400,000 validation.
+- Packed with tools/pack_positions.py (commit <hash>): boards 64 bytes per position, 2.5 GB for the training set.
+- Train: white to move 51.1%, mean |cp| 171.6, max 1000. Validation: white to move 51.0%, mean |cp| 171.7, max 1000. Mean piece count of the first 100,000 positions: 24.2 (train), 22.0 (validation); the difference comes from the stream order of the source file, not from the splits.
+
+## 7c: NNUE v1 training
+
+- Script: training/train_nnue.py (commit <hash>), PyTorch <version> with CUDA 12.8 on the RTX 5060, TF32 matrix products.
+- Network 768 -> 256 (x2 perspectives) -> 1, clipped ReLU [0, 1]. Adam, learning rate 1e-3 to 1e-5 (cosine per step), batch 16384, 20 epochs, seed 1. Data: nnue_quiet, 39,600,000 training and 400,000 validation positions.
+- Baseline validation loss (always predict the mean): 0.036170. Epoch 1: train 0.014050, val 0.012720. Epoch 20: train 0.010654, val 0.010955 (best). Loss = mean squared error in sigmoid space, K = 0.00368.
+- Speed: about 10 s per epoch (3.6 to 4.2 million positions per second), 20 epochs in about 3.5 minutes.
+- Observation: no overfitting (train and validation within 0.0003); the curve flattens, so the network, not the data, is the limit. Checkpoint nnue_v1_best.pt.
+
+## 7d: NNUE v2 training
+- QA = 512, QB = 512: validation loss on 100,000 positions float 0.010700, quantised 0.010695; score difference mean 1.74 cp, max 11.8 cp; worst-case |accumulator| bound 13,558 (int16 limit 32,767), worst-case |sum| bound 25,090,042 (int32 limit 2,147,483,647); measured max |accumulator| 9,266, max |sum| 1,348,307; max |w1| 770, max |b1| 364, max |w2| 1,292, b2 22,522.
+
+## 7e/7f: NNUE inference and strength
+
+- Commit: <7e commit hash>, GCC (CLion bundled MinGW), Release, C++20, -march=native. Network nnue_v1 (768 -> 256 x 2 -> 1, QA 512, QB 512).
+- Tests: 207 golden vectors from the Python integer reference reproduced exactly; incremental accumulators equal a rebuild after every make and unmake over depth-2 walks of five positions; <paste: all tests pass>.
+- Bench (UseNNUE off): bench 7 (depth 7) <334,865>, bench 8 (depth 8) <665,371>, equal to 6m. Bench (UseNNUE on): bench 7 (depth 7) <total>, <time> ms, <Mnps>; bench 8 (depth 8) <total>, <time> ms, <Mnps>.
+- Match: tc 8+0.08, Hash 16, concurrency 6, book 8moves_v3.pgn, SPRT elo0=0 elo1=10 alpha=beta=0.05, same executable with UseNNUE true and EvalFile nnue_v1.nnue against UseNNUE false: 65-5-20 over 90 games, +279.6 +/- 77.4, LOS 100.0%, draw ratio 22.2%, llr 2.96, H1 accepted. 5 unfinished games discarded.
+- Caveat: SPRT stopped at 90 games, so the point estimate is probably inflated (lower end of the interval about +200). Search margins were tuned for the hand-crafted evaluation. A longer fixed-count match is planned for the final figure.
 
 

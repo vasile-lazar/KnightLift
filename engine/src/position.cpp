@@ -55,6 +55,7 @@ namespace KnightLift {
         historyPly_ = 0;
         key_ = 0;
         psqMg_ = psqEg_ = phase_ = 0;
+        Nnue::reset(acc_);
     }
 
     void Position::put_piece(Piece p, Square s) {
@@ -67,6 +68,7 @@ namespace KnightLift {
         psqMg_ += EvalTables::kPieceMg[to_index(p)][to_index(s)];
         psqEg_ += EvalTables::kPieceEg[to_index(p)][to_index(s)];
         phase_ += EvalTables::kPhaseWeight[to_index(type_of(p))];
+        if (Nnue::enabled()) Nnue::add_feature(acc_, p, s);
     }
 
     bool Position::set_from_fen(std::string_view fen) {
@@ -244,6 +246,7 @@ namespace KnightLift {
 
     void Position::remove_piece(Square s) {
         const Piece p = board_[to_index(s)];
+        if (Nnue::enabled()) Nnue::sub_feature(acc_, p, s);
         psqMg_ -= EvalTables::kPieceMg[to_index(p)][to_index(s)];
         psqEg_ -= EvalTables::kPieceEg[to_index(p)][to_index(s)];
         phase_ -= EvalTables::kPhaseWeight[to_index(type_of(p))];
@@ -258,6 +261,10 @@ namespace KnightLift {
     // Precondition: `to` is empty.
     void Position::move_piece(Square from, Square to) {
         const Piece p = board_[to_index(from)];
+        if (Nnue::enabled()) {
+            Nnue::sub_feature(acc_, p, from);
+            Nnue::add_feature(acc_, p, to);
+        }
         psqMg_ += EvalTables::kPieceMg[to_index(p)][to_index(to)] -
           EvalTables::kPieceMg[to_index(p)][to_index(from)];
         psqEg_ += EvalTables::kPieceEg[to_index(p)][to_index(to)] -
@@ -443,8 +450,26 @@ namespace KnightLift {
             white |= bb[t];
             black |= bb[t + kNumPieceTypes];
         }
+        if (Nnue::enabled()) {
+            Nnue::Accumulator fresh;
+            Nnue::reset(fresh);
+            for (std::size_t i = 0; i < kNumSquares; ++i) {
+                if (board_[i] != Piece::None) {
+                    Nnue::add_feature(fresh, board_[i], static_cast<Square>(i));
+                }
+            }
+            if (!(fresh == acc_)) return false;
+        }
         return bb == pieceBB_ && white == colorBB_[0] && black == colorBB_[1] &&
                (white | black) == occupied_;
+    }
+
+    void Position::refresh_accumulators() {
+        Nnue::reset(acc_);
+        if (!Nnue::enabled()) return;
+        for (std::size_t i = 0; i < kNumSquares; ++i) {
+            if (board_[i] != Piece::None) Nnue::add_feature(acc_, board_[i], static_cast<Square>(i));
+        }
     }
 
     Key Position::ep_key() const {

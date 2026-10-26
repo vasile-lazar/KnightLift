@@ -11,6 +11,7 @@ add_library(KnightLift_core STATIC
         src/search.cpp
         src/tt.cpp
         src/eval_tables.hpp
+        src/nnue.cpp
 )
 target_include_directories(KnightLift_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src)
 find_package(Threads REQUIRED)

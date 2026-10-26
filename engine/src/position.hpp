@@ -10,6 +10,7 @@
 #include "types.hpp"
 #include "move.hpp"
 #include "zobrist.hpp"
+#include "nnue.hpp"
 
 namespace KnightLift {
 
@@ -70,7 +71,10 @@ namespace KnightLift {
         bool king_left_in_check() const {
             return is_attacked(king_square(~sideToMove_), sideToMove_);
         }
-
+        const Nnue::Accumulator &accumulator() const { return acc_; }
+        void refresh_accumulators(); // rebuild from the board (after UseNNUE or EvalFile changes)
+        // private:
+        Nnue::Accumulator acc_;
     private:
         void clear();
         void put_piece(Piece p, Square s);

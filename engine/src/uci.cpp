@@ -108,7 +108,9 @@ namespace KnightLift {
                                 << "option name RFPMargin type spin default 80 min 0 max 400\n"
                                 << "option name FutilityMargin type spin default 100 min 0 max 400\n"
                                 << "option name NullBase type spin default 2 min 1 max 4\n"
-                                << "option name AspDelta type spin default 25 min 5 max 200\nuciok";
+                                << "option name AspDelta type spin default 25 min 5 max 200\n"
+                                << "option name UseNNUE type check default false\n"
+                                << "option name EvalFile type string default <empty>\nuciok";
                         send(text.str());
                     } else if (command == "isready") {
                         send("readyok");
@@ -255,7 +257,8 @@ namespace KnightLift {
                     if (!name.empty()) name += ' ';
                     name += token;
                 }
-                args >> value;
+                std::getline(args >> std::ws, value);
+                while (!value.empty() && value.back() == ' ') value.pop_back();
 
                 if (name == "Hash") {
                     try {
@@ -274,6 +277,19 @@ namespace KnightLift {
                     set_rfp(value == "true");
                 } else if (name == "Futility") {
                     set_futility(value == "true");
+                } else if (name == "UseNNUE") {
+                    Nnue::set_use(value == "true");
+                    pos_.refresh_accumulators();
+                } else if (name == "EvalFile") {
+                    if (!value.empty() && value != "<empty>") {
+                        std::string error;
+                        if (Nnue::load(value, error)) {
+                            send("info string loaded network " + value);
+                        } else {
+                            send("info string EvalFile error: " + error);
+                        }
+                        pos_.refresh_accumulators();
+                    }
                 } else {
                     try {
                         set_search_param(name, std::stoi(value));
